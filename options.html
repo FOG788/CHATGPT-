@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>ChatGPT Thread Deleter 設定</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;color:#111827;background:#f9fafb}
+    .wrap{max-width:760px;background:#fff;border-radius:14px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+    h1{margin-top:0;font-size:24px}
+    p{color:#4b5563;line-height:1.6}
+    .row{display:flex;align-items:center;gap:12px;margin:14px 0;padding:10px 0;border-bottom:1px solid #e5e7eb}
+    label{font-weight:700}
+    .desc{color:#6b7280;font-size:13px}
+    .actions{display:flex;gap:12px;margin-top:24px}
+    button{border:none;border-radius:10px;padding:11px 16px;font-size:14px;font-weight:700;cursor:pointer}
+    #save{background:#111827;color:#fff}
+    #disableAll{background:#e5e7eb;color:#111827}
+    #status{margin-top:16px;font-weight:700}
+    input[type="number"]{width:90px;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px}
+    .subrow{margin-left:28px;padding-top:4px;color:#6b7280;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>機能設定</h1>
+    <p>チェックした機能だけ有効になります。初期設定はすべて無効です。</p>
+
+    <div class="row"><input type="checkbox" id="enableDeleteButton"><div><label for="enableDeleteButton">削除ボタン</label><div class="desc">入力欄の左外側に「削除」ボタンを表示</div></div></div>
+    <div class="row"><input type="checkbox" id="enableRecentCount"><div><label for="enableRecentCount">最近の件数表示</label><div class="desc">1分ごとに自動更新されます</div></div></div>
+    <div class="row"><input type="checkbox" id="enableDeleteShortcut"><div><label for="enableDeleteShortcut">削除ショートカット</label><div class="desc">Ctrl/Cmd + Shift + Backspace</div></div></div>
+    <div class="row"><input type="checkbox" id="enableNavShortcuts"><div><label for="enableNavShortcuts">移動ショートカット</label><div class="desc">Alt + J / Alt + K で上下のスレッドへ移動</div></div></div>
+
+    <div class="row"><input type="checkbox" id="enableDeleteTimerDisplay"><div><label for="enableDeleteTimerDisplay">削除タイマー表示</label><div class="desc">削除したらタイマーを開始し、残り時間を表示する</div></div></div>
+    <div class="subrow">タイマー時間: <input type="number" id="deleteTimerMin" min="1" max="1440" step="1" value="5"> <span>分</span></div>
+
+    <div class="row"><input type="checkbox" id="enableAutoScrollRecent"><div><label for="enableAutoScrollRecent">自動スクロール</label><div class="desc">左のスレッド一覧を定期的に下までスクロールする</div></div></div>
+    <div class="subrow">最近件数しきい値: <input type="number" id="autoScrollRecentThreshold" min="1" max="1000" step="1" value="100"> <span>以下で実行</span></div>
+    <div class="subrow">自動スクロール間隔: <input type="number" id="autoScrollIntervalMin" min="1" max="30" step="1" value="1"> <span>分（1〜30分）</span></div>
+    <div class="subrow">自動スクロール実行回数: <input type="number" id="autoScrollMaxRuns" min="1" max="200" step="1" value="20"> <span>回</span></div>
+    <div class="subrow">スクロール後待機時間: <input type="number" id="autoScrollStepWaitSec" min="1" max="300" step="1" value="2"> <span>秒（1〜300秒）</span></div>
+
+    <div class="row"><input type="checkbox" id="enableAutoMoveAfterDelete"><div><label for="enableAutoMoveAfterDelete">削除後に自動移動</label><div class="desc">削除後、次のスレッドへ自動で移動する</div></div></div>
+    <div class="subrow">待機秒数: <input type="number" id="autoMoveDelaySec" min="3" max="5" step="1" value="4"> <span>秒（3〜5秒）</span><div class="desc">自動スクロールが有効な場合は、自動移動は無効化されます。</div></div>
+
+    <div class="actions"><button id="save">保存</button><button id="disableAll" type="button">全部オフ</button></div>
+    <div id="status"></div>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
