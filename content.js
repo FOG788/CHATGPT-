@@ -177,12 +177,30 @@
     return [...document.querySelectorAll('a[href*="/c/"]')];
   }
 
-  function getNeighborHref(offset) {
+  function getNeighborLink(offset) {
     const currentPath = location.pathname;
     const links = getConversationLinks();
-    const idx = links.findIndex(a => hrefPath(a.href || a.getAttribute("href")) === currentPath);
-    const target = idx >= 0 ? links[idx + offset] : null;
-    return target ? (target.href || target.getAttribute("href")) : null;
+    const idx = links.findIndex((a) => hrefPath(a.href || a.getAttribute("href")) === currentPath);
+    return idx >= 0 ? links[idx + offset] || null : null;
+  }
+
+  function moveToConversation(target) {
+    if (!target) return false;
+    const href = target.href || target.getAttribute("href");
+    if (!href) return false;
+    const currentPath = location.pathname;
+    const nextPath = hrefPath(href);
+    if (!nextPath || nextPath === currentPath) return false;
+    try {
+      target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+      setTimeout(() => {
+        if (location.pathname === currentPath) location.href = href;
+      }, 220);
+      return true;
+    } catch {
+      location.href = href;
+      return true;
+    }
   }
 
   function findSidebarScrollable() {
@@ -421,14 +439,14 @@
         return;
       }
 
-      const nextHref = getNeighborHref(1) || getNeighborHref(-1);
-      if (!nextHref) {
+      const nextLink = getNeighborLink(1) || getNeighborLink(-1);
+      if (!nextLink) {
         showToast("削除しました");
         return;
       }
 
       showToast(`削除後に ${Math.round(settings.autoMoveDelayMs / 1000)} 秒待って移動`);
-      setTimeout(() => { location.href = nextHref; }, settings.autoMoveDelayMs);
+      setTimeout(() => { moveToConversation(nextLink); }, settings.autoMoveDelayMs);
     } catch (e) {
       console.error(e);
       alert("削除失敗");
@@ -450,8 +468,8 @@
 
   function navigate(offset) {
     if (!settings.enableNavShortcuts) return;
-    const href = getNeighborHref(offset);
-    if (href) location.href = href;
+    const link = getNeighborLink(offset);
+    moveToConversation(link);
   }
 
   function startHealingLoop() {
