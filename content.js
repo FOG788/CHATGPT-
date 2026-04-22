@@ -6,10 +6,8 @@
     enableNavShortcuts: false,
     enableRandomThreadButton: false,
     enableAutoScrollRecent: false,
-    enableAutoMoveAfterDelete: false,
     enableDeleteTimerDisplay: false,
     deleteTimerDurationMs: 300000,
-    autoMoveDelayMs: 4000,
     autoScrollIntervalMs: 60000,
     autoScrollMaxRuns: 20,
     autoScrollStepWaitMs: 2000,
@@ -53,7 +51,6 @@
 
   function normalizeSettings(raw) {
     const s = { ...DEFAULTS, ...raw };
-    s.autoMoveDelayMs = clamp(s.autoMoveDelayMs, 3000, 5000, 4000);
     s.autoScrollIntervalMs = clamp(s.autoScrollIntervalMs, 60000, 1800000, 60000);
     s.autoScrollMaxRuns = clamp(s.autoScrollMaxRuns, 1, 200, 20);
     s.autoScrollStepWaitMs = clamp(s.autoScrollStepWaitMs, 1000, 300000, 2000);
@@ -525,20 +522,14 @@
 
       if (settings.enableDeleteTimerDisplay) startDeleteTimer();
 
-      const shouldMove = settings.enableAutoMoveAfterDelete && !settings.enableAutoScrollRecent;
-      if (!shouldMove) {
+      const randomLink = getRandomConversationLink();
+      if (!randomLink) {
         showToast("削除しました");
         return;
       }
 
-      const nextLink = getNeighborLink(1) || getNeighborLink(-1);
-      if (!nextLink) {
-        showToast("削除しました");
-        return;
-      }
-
-      showToast(`削除後に ${Math.round(settings.autoMoveDelayMs / 1000)} 秒待って移動`);
-      setTimeout(() => { moveToConversation(nextLink); }, settings.autoMoveDelayMs);
+      showToast("削除しました。ランダムなスレッドへ移動します");
+      moveToConversation(randomLink);
     } catch (e) {
       console.error(e);
       alert("削除失敗");

@@ -5,10 +5,8 @@ const DEFAULTS = {
   enableNavShortcuts: false,
   enableRandomThreadButton: false,
   enableAutoScrollRecent: false,
-  enableAutoMoveAfterDelete: false,
   enableDeleteTimerDisplay: false,
   deleteTimerDurationMs: 300000,
-  autoMoveDelayMs: 4000,
   autoScrollIntervalMs: 60000,
   autoScrollMaxRuns: 20,
   autoScrollStepWaitMs: 2000,
@@ -17,7 +15,6 @@ const DEFAULTS = {
 
 const NUMERIC_SETTING_KEYS = [
   "deleteTimerDurationMs",
-  "autoMoveDelayMs",
   "autoScrollIntervalMs",
   "autoScrollMaxRuns",
   "autoScrollStepWaitMs",
@@ -54,9 +51,6 @@ function loadNumericInputs(data) {
   document.getElementById("deleteTimerMin").value = String(
     Math.round((data.deleteTimerDurationMs || 300000) / 60000),
   );
-  document.getElementById("autoMoveDelaySec").value = String(
-    Math.round((data.autoMoveDelayMs || 4000) / 1000),
-  );
   document.getElementById("autoScrollIntervalMin").value = String(
     Math.round((data.autoScrollIntervalMs || 60000) / 60000),
   );
@@ -84,7 +78,6 @@ function buildPayload() {
 
   payload.deleteTimerDurationMs =
     clamp(document.getElementById("deleteTimerMin").value, 1, 1440, 5) * 60000;
-  payload.autoMoveDelayMs = clamp(document.getElementById("autoMoveDelaySec").value, 3, 5, 4) * 1000;
   payload.autoScrollIntervalMs =
     clamp(document.getElementById("autoScrollIntervalMin").value, 1, 30, 1) * 60000;
   payload.autoScrollMaxRuns = clamp(document.getElementById("autoScrollMaxRuns").value, 1, 200, 20);
