@@ -404,25 +404,24 @@
 
     autoScrollInFlight = true;
     try {
-      let noProgressRuns = 0;
-      for (let i = 0; i < settings.autoScrollMaxRuns; i++) {
-        if (getRecentCount() > settings.autoScrollRecentThreshold) break;
-        const beforeHeight = scroller.scrollHeight;
-        const beforeTop = scroller.scrollTop;
-        const beforeCount = getRecentCount();
-        scroller.scrollTo({ top: scroller.scrollHeight, behavior: "auto" });
-        scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
-        await new Promise(r => setTimeout(r, settings.autoScrollStepWaitMs));
+      // 1回のインターバルで複数ステップ進めると連続スクロールに見えるため、
+      // ここでは1ステップだけ実行し、次回は interval 後に再評価する。
+      const beforeHeight = scroller.scrollHeight;
+      const beforeTop = scroller.scrollTop;
+      const beforeCount = getRecentCount();
+      scroller.scrollTo({ top: scroller.scrollHeight, behavior: "auto" });
+      scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
+      await new Promise(r => setTimeout(r, settings.autoScrollStepWaitMs));
 
-        const afterHeight = scroller.scrollHeight;
-        const afterTop = scroller.scrollTop;
-        const afterCount = getRecentCount();
-        const hasProgress =
-          afterCount > beforeCount ||
-          afterHeight > beforeHeight ||
-          afterTop > beforeTop;
-        noProgressRuns = hasProgress ? 0 : noProgressRuns + 1;
-        if (noProgressRuns >= 2) break;
+      const afterHeight = scroller.scrollHeight;
+      const afterTop = scroller.scrollTop;
+      const afterCount = getRecentCount();
+      const hasProgress =
+        afterCount > beforeCount ||
+        afterHeight > beforeHeight ||
+        afterTop > beforeTop;
+      if (!hasProgress) {
+        // 進捗がなくても完了扱いにして、無限再試行を防ぐ。
       }
       markAutoScrollCompleted();
       rerender();
