@@ -4,6 +4,7 @@
     enableRecentCount: false,
     enableDeleteShortcut: false,
     enableNavShortcuts: false,
+    enableRandomThreadButton: false,
     enableAutoScrollRecent: false,
     enableAutoMoveAfterDelete: false,
     enableDeleteTimerDisplay: false,
@@ -20,6 +21,7 @@
     count: "cgpt-recent-count",
     del: "cgpt-delete",
     settings: "cgpt-open-settings",
+    random: "cgpt-random-thread",
     style: "cgpt-inline-style",
     toast: "cgpt-inline-toast",
     timer: "cgpt-delete-timer",
@@ -157,7 +159,8 @@
       #${IDS.count},#${IDS.timer}{padding:0 10px;height:36px;display:flex;align-items:center;background:#111827;color:#fff;border-radius:8px;font-size:12px;font-weight:700}
       #${IDS.del}{height:36px;padding:0 12px;background:#e11d48;color:#fff;border:none;border-radius:8px;cursor:pointer}
       #${IDS.del}:disabled{opacity:.72;cursor:wait}
-      #${IDS.settings}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
+      #${IDS.settings},#${IDS.random}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
+      #${IDS.random}{background:#0f766e}
     `;
     document.documentElement.appendChild(style);
   }
@@ -183,6 +186,31 @@
     const links = getConversationLinks();
     const idx = links.findIndex((a) => hrefPath(a.href || a.getAttribute("href")) === currentPath);
     return idx >= 0 ? links[idx + offset] || null : null;
+  }
+
+
+  function getRandomConversationLink() {
+    const currentPath = location.pathname;
+    const uniqueByPath = new Map();
+    for (const link of getConversationLinks()) {
+      const path = hrefPath(link.href || link.getAttribute("href"));
+      if (!path || !path.includes("/c/")) continue;
+      if (path === currentPath) continue;
+      if (!uniqueByPath.has(path)) uniqueByPath.set(path, link);
+    }
+    const pool = [...uniqueByPath.values()];
+    if (!pool.length) return null;
+    const index = Math.floor(Math.random() * pool.length);
+    return pool[index] || null;
+  }
+
+  function moveToRandomConversation() {
+    const randomLink = getRandomConversationLink();
+    if (!randomLink) {
+      showToast("移動できる別スレッドがありません", "error", 1800);
+      return;
+    }
+    moveToConversation(randomLink);
   }
 
   function moveToConversation(target) {
@@ -304,9 +332,30 @@
     if (btn.parentElement !== anchor) anchor.appendChild(btn);
   }
 
+  function ensureRandomButton(anchor) {
+    let btn = document.getElementById(IDS.random);
+    if (!settings.enableRandomThreadButton) {
+      btn?.remove();
+      return;
+    }
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = IDS.random;
+      btn.type = "button";
+      btn.textContent = "ランダム移動";
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        moveToRandomConversation();
+      });
+    }
+    if (btn.parentElement !== anchor) anchor.appendChild(btn);
+  }
+
   function removeInlineUI() {
     document.getElementById(IDS.slot)?.remove();
     document.getElementById(IDS.settings)?.remove();
+    document.getElementById(IDS.random)?.remove();
   }
 
   function rerender() {
@@ -320,6 +369,7 @@
     if (!anchor) return;
 
     ensureSettingsButton(anchor);
+    ensureRandomButton(anchor);
 
     const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton() || settings.enableDeleteTimerDisplay;
     let slot = document.getElementById(IDS.slot);
@@ -520,10 +570,12 @@
       const anchor = findAnchor();
       const settingsBtn = document.getElementById(IDS.settings);
       const slot = document.getElementById(IDS.slot);
+      const randomBtn = document.getElementById(IDS.random);
       const inlineNeeded = settings.enableRecentCount || shouldShowDeleteButton() || settings.enableDeleteTimerDisplay;
       const needsRepair =
         (anchor && settingsBtn && settingsBtn.parentElement !== anchor) ||
         (anchor && !settingsBtn) ||
+        (settings.enableRandomThreadButton && anchor && (!randomBtn || randomBtn.parentElement !== anchor)) ||
         (inlineNeeded && anchor && (!slot || slot.parentElement !== anchor));
       if (needsRepair) rerender();
       if (settings.enableAutoScrollRecent) autoScrollRecentIfNeeded();
@@ -543,6 +595,11 @@
       if (settings.enableNavShortcuts && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && key === "k") {
         e.preventDefault();
         navigate(-1);
+        return;
+      }
+      if (settings.enableNavShortcuts && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && key === "r") {
+        e.preventDefault();
+        moveToRandomConversation();
         return;
       }
       if (settings.enableDeleteShortcut && (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "Backspace") {

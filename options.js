@@ -3,6 +3,7 @@ const DEFAULTS = {
   enableRecentCount: false,
   enableDeleteShortcut: false,
   enableNavShortcuts: false,
+  enableRandomThreadButton: false,
   enableAutoScrollRecent: false,
   enableAutoMoveAfterDelete: false,
   enableDeleteTimerDisplay: false,
