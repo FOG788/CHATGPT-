@@ -39,6 +39,7 @@
   let autoScrollInFlight = false;
   let lastAutoScrollAt = 0;
   let recentRefreshTimer = null;
+  let recentCountDeferredTimer = null;
   let deleteTimerTicker = null;
   let deleteTimerEndsAt = 0;
 
@@ -385,6 +386,12 @@
     }, 60000);
   }
 
+  function refreshRecentCountUI() {
+    if (!settings.enableRecentCount) return;
+    const el = document.getElementById(IDS.count);
+    if (el) el.textContent = "最近: " + getRecentCount();
+  }
+
   async function autoScrollRecentIfNeeded() {
     if (!settings.enableAutoScrollRecent) return;
     if (autoScrollInFlight) return;
@@ -397,13 +404,33 @@
 
     autoScrollInFlight = true;
     try {
+      let noProgressRuns = 0;
       for (let i = 0; i < settings.autoScrollMaxRuns; i++) {
+        if (getRecentCount() > settings.autoScrollRecentThreshold) break;
+        const beforeHeight = scroller.scrollHeight;
+        const beforeTop = scroller.scrollTop;
+        const beforeCount = getRecentCount();
         scroller.scrollTo({ top: scroller.scrollHeight, behavior: "auto" });
         scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
         await new Promise(r => setTimeout(r, settings.autoScrollStepWaitMs));
+
+        const afterHeight = scroller.scrollHeight;
+        const afterTop = scroller.scrollTop;
+        const afterCount = getRecentCount();
+        const hasProgress =
+          afterCount > beforeCount ||
+          afterHeight > beforeHeight ||
+          afterTop > beforeTop;
+        noProgressRuns = hasProgress ? 0 : noProgressRuns + 1;
+        if (noProgressRuns >= 2) break;
       }
       markAutoScrollCompleted();
       rerender();
+      if (recentCountDeferredTimer) clearTimeout(recentCountDeferredTimer);
+      recentCountDeferredTimer = setTimeout(() => {
+        refreshRecentCountUI();
+        recentCountDeferredTimer = null;
+      }, 5000);
     } finally {
       autoScrollInFlight = false;
     }
