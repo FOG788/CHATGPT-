@@ -229,18 +229,30 @@
     el.textContent = "削除タイマー: " + formatMs(remaining);
   }
 
+  function isDeleteTimerRunning() {
+    return settings.enableDeleteTimerDisplay && deleteTimerEndsAt > Date.now();
+  }
+
+  function shouldShowDeleteButton() {
+    if (!settings.enableDeleteButton) return false;
+    if (!settings.enableDeleteTimerDisplay) return true;
+    return !isDeleteTimerRunning();
+  }
+
   function startDeleteTimer() {
     deleteTimerEndsAt = Date.now() + settings.deleteTimerDurationMs;
     try {
       localStorage.setItem(STORAGE_KEYS.deleteTimerEndsAt, String(deleteTimerEndsAt));
     } catch {}
     updateTimerUI();
+    rerender();
     if (deleteTimerTicker) clearInterval(deleteTimerTicker);
     deleteTimerTicker = setInterval(() => {
       updateTimerUI();
       if (Date.now() >= deleteTimerEndsAt) {
         clearInterval(deleteTimerTicker);
         deleteTimerTicker = null;
+        rerender();
       }
     }, 1000);
   }
@@ -251,6 +263,7 @@
       const n = Number(raw);
       if (Number.isFinite(n) && n > Date.now()) {
         deleteTimerEndsAt = n;
+        rerender();
         if (deleteTimerTicker) clearInterval(deleteTimerTicker);
         deleteTimerTicker = setInterval(() => {
           updateTimerUI();
@@ -258,6 +271,7 @@
             clearInterval(deleteTimerTicker);
             deleteTimerTicker = null;
             showToast("削除タイマー終了");
+            rerender();
           }
         }, 1000);
       }
@@ -306,7 +320,7 @@
 
     ensureSettingsButton(anchor);
 
-    const anyInlineEnabled = settings.enableRecentCount || settings.enableDeleteButton || settings.enableDeleteTimerDisplay;
+    const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton() || settings.enableDeleteTimerDisplay;
     let slot = document.getElementById(IDS.slot);
 
     if (!anyInlineEnabled) {
@@ -348,7 +362,9 @@
       updateTimerUI();
     }
 
-    if (settings.enableDeleteButton && !document.getElementById(IDS.del)) {
+    if (!shouldShowDeleteButton()) {
+      delEl?.remove();
+    } else if (!document.getElementById(IDS.del)) {
       const btn = document.createElement("button");
       btn.id = IDS.del;
       btn.type = "button";
@@ -478,7 +494,7 @@
       const anchor = findAnchor();
       const settingsBtn = document.getElementById(IDS.settings);
       const slot = document.getElementById(IDS.slot);
-      const inlineNeeded = settings.enableRecentCount || settings.enableDeleteButton || settings.enableDeleteTimerDisplay;
+      const inlineNeeded = settings.enableRecentCount || shouldShowDeleteButton() || settings.enableDeleteTimerDisplay;
       const needsRepair =
         (anchor && settingsBtn && settingsBtn.parentElement !== anchor) ||
         (anchor && !settingsBtn) ||
