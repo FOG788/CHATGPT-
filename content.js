@@ -6,8 +6,6 @@
     enableNavShortcuts: false,
     enableRandomThreadButton: false,
     enableAutoScrollRecent: false,
-    enableDeleteTimerDisplay: false,
-    deleteTimerDurationMs: 300000,
     autoScrollIntervalMs: 60000,
     autoScrollMaxRuns: 20,
     autoScrollStepWaitMs: 2000,
@@ -22,11 +20,9 @@
     random: "cgpt-random-thread",
     style: "cgpt-inline-style",
     toast: "cgpt-inline-toast",
-    timer: "cgpt-delete-timer",
   };
 
   const STORAGE_KEYS = {
-    deleteTimerEndsAt: "cgpt_delete_timer_ends_at",
     nextAutoScrollAt: "cgpt_next_auto_scroll_at",
   };
 
@@ -40,8 +36,6 @@
   let lastAutoScrollAt = 0;
   let recentRefreshTimer = null;
   let recentCountDeferredTimer = null;
-  let deleteTimerTicker = null;
-  let deleteTimerEndsAt = 0;
 
   function clamp(n, min, max, fallback) {
     n = Number(n);
@@ -55,7 +49,6 @@
     s.autoScrollMaxRuns = clamp(s.autoScrollMaxRuns, 1, 200, 20);
     s.autoScrollStepWaitMs = clamp(s.autoScrollStepWaitMs, 1000, 300000, 2000);
     s.autoScrollRecentThreshold = clamp(s.autoScrollRecentThreshold, 1, 1000, 100);
-    s.deleteTimerDurationMs = clamp(s.deleteTimerDurationMs, 60000, 86400000, 300000);
     return s;
   }
 
@@ -76,12 +69,6 @@
     }
   }
 
-  function formatMs(ms) {
-    const sec = Math.max(0, Math.ceil(ms / 1000));
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${String(s).padStart(2, "0")}`;
-  }
 
   function showToast(message, kind = "info", ms = 1500) {
     let el = document.getElementById(IDS.toast);
@@ -153,7 +140,7 @@
     style.id = IDS.style;
     style.textContent = `
       #${IDS.slot}{display:flex;gap:8px;align-items:center;margin-right:8px;flex:0 0 auto}
-      #${IDS.count},#${IDS.timer}{padding:0 10px;height:36px;display:flex;align-items:center;background:#111827;color:#fff;border-radius:8px;font-size:12px;font-weight:700}
+      #${IDS.count}{padding:0 10px;height:36px;display:flex;align-items:center;background:#111827;color:#fff;border-radius:8px;font-size:12px;font-weight:700}
       #${IDS.del}{height:36px;padding:0 12px;background:#e11d48;color:#fff;border:none;border-radius:8px;cursor:pointer}
       #${IDS.del}:disabled{opacity:.72;cursor:wait}
       #${IDS.settings},#${IDS.random}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
@@ -248,61 +235,12 @@
     return null;
   }
 
-  function updateTimerUI() {
-    const el = document.getElementById(IDS.timer);
-    if (!el || !settings.enableDeleteTimerDisplay) return;
-    const remaining = deleteTimerEndsAt - Date.now();
-    el.textContent = "削除タイマー: " + formatMs(remaining);
-  }
-
-  function isDeleteTimerRunning() {
-    return settings.enableDeleteTimerDisplay && deleteTimerEndsAt > Date.now();
-  }
 
   function shouldShowDeleteButton() {
     if (!settings.enableDeleteButton) return false;
-    if (!settings.enableDeleteTimerDisplay) return true;
-    return !isDeleteTimerRunning();
+    return true;
   }
 
-  function startDeleteTimer() {
-    deleteTimerEndsAt = Date.now() + settings.deleteTimerDurationMs;
-    try {
-      localStorage.setItem(STORAGE_KEYS.deleteTimerEndsAt, String(deleteTimerEndsAt));
-    } catch {}
-    updateTimerUI();
-    rerender();
-    if (deleteTimerTicker) clearInterval(deleteTimerTicker);
-    deleteTimerTicker = setInterval(() => {
-      updateTimerUI();
-      if (Date.now() >= deleteTimerEndsAt) {
-        clearInterval(deleteTimerTicker);
-        deleteTimerTicker = null;
-        rerender();
-      }
-    }, 1000);
-  }
-
-  function restoreDeleteTimer() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.deleteTimerEndsAt);
-      const n = Number(raw);
-      if (Number.isFinite(n) && n > Date.now()) {
-        deleteTimerEndsAt = n;
-        rerender();
-        if (deleteTimerTicker) clearInterval(deleteTimerTicker);
-        deleteTimerTicker = setInterval(() => {
-          updateTimerUI();
-          if (Date.now() >= deleteTimerEndsAt) {
-            clearInterval(deleteTimerTicker);
-            deleteTimerTicker = null;
-            showToast("削除タイマー終了");
-            rerender();
-          }
-        }, 1000);
-      }
-    } catch {}
-  }
 
   function ensureSettingsButton(anchor) {
     let btn = document.getElementById(IDS.settings);
@@ -368,7 +306,7 @@
     ensureSettingsButton(anchor);
     ensureRandomButton(anchor);
 
-    const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton() || settings.enableDeleteTimerDisplay;
+    const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton();
     let slot = document.getElementById(IDS.slot);
 
     if (!anyInlineEnabled) {
@@ -387,8 +325,6 @@
     const delEl = document.getElementById(IDS.del);
     if (delEl && !settings.enableDeleteButton) delEl.remove();
 
-    const timerEl = document.getElementById(IDS.timer);
-    if (timerEl && !settings.enableDeleteTimerDisplay) timerEl.remove();
 
     if (settings.enableRecentCount) {
       let count = document.getElementById(IDS.count);
@@ -398,16 +334,6 @@
         slot.appendChild(count);
       }
       count.textContent = "最近: " + getRecentCount();
-    }
-
-    if (settings.enableDeleteTimerDisplay) {
-      let timer = document.getElementById(IDS.timer);
-      if (!timer) {
-        timer = document.createElement("div");
-        timer.id = IDS.timer;
-        slot.appendChild(timer);
-      }
-      updateTimerUI();
     }
 
     if (!shouldShowDeleteButton()) {
@@ -520,7 +446,6 @@
       });
       if (!res.ok) throw new Error("delete failed");
 
-      if (settings.enableDeleteTimerDisplay) startDeleteTimer();
 
       const randomLink = getRandomConversationLink();
       if (!randomLink) {
@@ -562,7 +487,7 @@
       const settingsBtn = document.getElementById(IDS.settings);
       const slot = document.getElementById(IDS.slot);
       const randomBtn = document.getElementById(IDS.random);
-      const inlineNeeded = settings.enableRecentCount || shouldShowDeleteButton() || settings.enableDeleteTimerDisplay;
+      const inlineNeeded = settings.enableRecentCount || shouldShowDeleteButton();
       const needsRepair =
         (anchor && settingsBtn && settingsBtn.parentElement !== anchor) ||
         (anchor && !settingsBtn) ||
@@ -649,7 +574,6 @@
   async function boot() {
     await loadSettings();
     loadNextAutoScrollAt();
-    restoreDeleteTimer();
     injectStyle();
     installKeyboard();
     hookHistory();
