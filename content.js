@@ -171,6 +171,26 @@
     return [...document.querySelectorAll('nav a[href*="/c/"]')];
   }
 
+  function getProjectSectionContainers() {
+    const labels = ["project", "projects", "shortcut", "shortcuts", "プロジェクト", "ショートカット"];
+    const nodes = [...document.querySelectorAll('nav section, nav div, nav [role="group"], nav li')];
+    return nodes.filter((node) => {
+      const text = (node.textContent || "").toLowerCase();
+      return labels.some((label) => text.includes(label));
+    });
+  }
+
+  function getProjectConversationPaths() {
+    const paths = new Set();
+    for (const node of getProjectSectionContainers()) {
+      for (const link of node.querySelectorAll('a[href*="/c/"]')) {
+        const path = hrefPath(link.href || link.getAttribute("href"));
+        if (path) paths.add(path);
+      }
+    }
+    return paths;
+  }
+
   function isProjectConversationLink(link) {
     if (!link) return false;
 
@@ -184,12 +204,15 @@
   }
 
   function hideProjectRecentItems() {
+    const projectPaths = getProjectConversationPaths();
     for (const link of getRecentLinks()) {
       const row =
         link.closest('li, [role="listitem"], [data-testid*="conversation" i], [data-testid*="thread" i]');
       if (!row) continue;
 
-      if (isProjectConversationLink(link)) {
+      const path = hrefPath(link.href || link.getAttribute("href"));
+      const shouldHide = isProjectConversationLink(link) || (path && projectPaths.has(path));
+      if (shouldHide) {
         row.style.display = "none";
         row.setAttribute("data-cgpt-hidden-project", "1");
       } else if (row.getAttribute("data-cgpt-hidden-project") === "1") {
@@ -200,7 +223,11 @@
   }
 
   function getRecentCount() {
-    return getRecentLinks().filter((link) => !isProjectConversationLink(link)).length;
+    const projectPaths = getProjectConversationPaths();
+    return getRecentLinks().filter((link) => {
+      const path = hrefPath(link.href || link.getAttribute("href"));
+      return !isProjectConversationLink(link) && !(path && projectPaths.has(path));
+    }).length;
   }
 
   function getConversationLinks() {
