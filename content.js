@@ -237,6 +237,7 @@
   }
 
   function hideProjectRecentItems() {
+    const projectPaths = getProjectConversationPaths();
     for (const link of getRecentLinks()) {
       const row =
         link.closest('li, [role="listitem"], [data-testid*="conversation" i], [data-testid*="thread" i]');
