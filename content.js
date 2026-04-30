@@ -153,16 +153,59 @@
     return document.querySelector("form") || document.querySelector("textarea")?.parentElement || null;
   }
 
+  function getRecentSectionContainers() {
+    const labels = ["recent", "recents", "最近"];
+    const nodes = [...document.querySelectorAll('nav section, nav div, nav [role="group"], nav li')];
+    return nodes.filter((node) => {
+      const text = (node.textContent || "").toLowerCase();
+      return labels.some((label) => text.includes(label));
+    });
+  }
+
   function getRecentLinks() {
+    const containers = getRecentSectionContainers();
+    if (containers.length) {
+      const links = containers.flatMap((node) => [...node.querySelectorAll('a[href*="/c/"]')]);
+      if (links.length) return links;
+    }
     return [...document.querySelectorAll('nav a[href*="/c/"]')];
   }
 
+  function isProjectConversationLink(link) {
+    if (!link) return false;
+
+    const href = (link.getAttribute("href") || link.href || "").toLowerCase();
+    if (href.includes("/project/") || href.includes("/projects/")) return true;
+
+    const projectContainer = link.closest(
+      '[data-testid*="project" i], [class*="project" i], [id*="project" i], [aria-label*="project" i], [aria-label*="プロジェクト" i]'
+    );
+    return !!projectContainer;
+  }
+
+  function hideProjectRecentItems() {
+    for (const link of getRecentLinks()) {
+      const row =
+        link.closest('li, [role="listitem"], [data-testid*="conversation" i], [data-testid*="thread" i]');
+      if (!row) continue;
+
+      if (isProjectConversationLink(link)) {
+        row.style.display = "none";
+        row.setAttribute("data-cgpt-hidden-project", "1");
+      } else if (row.getAttribute("data-cgpt-hidden-project") === "1") {
+        row.style.display = "";
+        row.removeAttribute("data-cgpt-hidden-project");
+      }
+    }
+  }
+
   function getRecentCount() {
-    return getRecentLinks().length;
+    return getRecentLinks().filter((link) => !isProjectConversationLink(link)).length;
   }
 
   function getConversationLinks() {
-    return [...document.querySelectorAll('a[href*="/c/"]')];
+    return [...document.querySelectorAll('a[href*="/c/"]')]
+      .filter((link) => !isProjectConversationLink(link));
   }
 
   function getNeighborLink(offset) {
@@ -295,6 +338,7 @@
 
   function rerender() {
     injectStyle();
+    hideProjectRecentItems();
     if (!isConversation()) {
       removeInlineUI();
       return;
@@ -493,6 +537,7 @@
         (anchor && !settingsBtn) ||
         (settings.enableRandomThreadButton && anchor && (!randomBtn || randomBtn.parentElement !== anchor)) ||
         (inlineNeeded && anchor && (!slot || slot.parentElement !== anchor));
+      hideProjectRecentItems();
       if (needsRepair) rerender();
       if (settings.enableAutoScrollRecent) autoScrollRecentIfNeeded();
       healTimer = setTimeout(tick, 1500);
