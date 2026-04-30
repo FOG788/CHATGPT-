@@ -172,11 +172,21 @@
   }
 
   function getProjectSectionContainers() {
-    const labels = ["project", "projects", "shortcut", "shortcuts", "プロジェクト", "ショートカット"];
+    const projectLabels = ["project", "projects", "shortcut", "shortcuts", "プロジェクト", "ショートカット"];
+    const recentLabels = ["recent", "recents", "最近"];
     const nodes = [...document.querySelectorAll('nav section, nav div, nav [role="group"], nav li')];
     return nodes.filter((node) => {
       const text = (node.textContent || "").toLowerCase();
-      return labels.some((label) => text.includes(label));
+      const hasProjectLabel = projectLabels.some((label) => text.includes(label));
+      const hasRecentLabel = recentLabels.some((label) => text.includes(label));
+      if (!hasProjectLabel || hasRecentLabel) return false;
+      if (!node.querySelector('a[href*="/c/"]')) return false;
+
+      const childWithProjectLabel = [...node.children].some((child) => {
+        const childText = (child.textContent || "").toLowerCase();
+        return projectLabels.some((label) => childText.includes(label));
+      });
+      return !childWithProjectLabel;
     });
   }
 
