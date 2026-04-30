@@ -242,15 +242,32 @@
     return new Set();
   }
 
+
+  function getNonRecentConversationPaths() {
+    const recentLinks = new Set(getRecentLinks());
+    const paths = new Set();
+    for (const link of document.querySelectorAll('nav a[href*="/c/"]')) {
+      if (recentLinks.has(link)) continue;
+      const path = hrefPath(link.href || link.getAttribute("href"));
+      if (path) paths.add(path);
+    }
+    return paths;
+  }
+
   function hideProjectRecentItems() {
-    const projectPaths = getProjectConversationPaths();
+    const nonRecentPaths = getNonRecentConversationPaths();
     for (const link of getRecentLinks()) {
       const row =
         link.closest('li, [role="listitem"], [data-testid*="conversation" i], [data-testid*="thread" i]');
       if (!row) continue;
 
-      const id = getConversationIdFromHref(link.href || link.getAttribute("href"));
-      const shouldHide = isProjectConversationLink(link) || (id && projectConversationCache.get(id) === true);
+      const href = link.href || link.getAttribute("href");
+      const id = getConversationIdFromHref(href);
+      const path = hrefPath(href || "");
+      const shouldHide =
+        isProjectConversationLink(link) ||
+        (id && projectConversationCache.get(id) === true) ||
+        (path && nonRecentPaths.has(path));
       if (shouldHide) {
         row.style.display = "none";
         row.setAttribute("data-cgpt-hidden-project", "1");
@@ -262,9 +279,16 @@
   }
 
   function getRecentCount() {
+    const nonRecentPaths = getNonRecentConversationPaths();
     return getRecentLinks().filter((link) => {
-      const id = getConversationIdFromHref(link.href || link.getAttribute("href"));
-      return !isProjectConversationLink(link) && !(id && projectConversationCache.get(id) === true);
+      const href = link.href || link.getAttribute("href");
+      const id = getConversationIdFromHref(href);
+      const path = hrefPath(href || "");
+      return (
+        !isProjectConversationLink(link) &&
+        !(id && projectConversationCache.get(id) === true) &&
+        !(path && nonRecentPaths.has(path))
+      );
     }).length;
   }
 
