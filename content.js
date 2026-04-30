@@ -236,6 +236,12 @@
     }
   }
 
+
+  // Backward-compatible shim for older call sites.
+  function getProjectConversationPaths() {
+    return new Set();
+  }
+
   function hideProjectRecentItems() {
     const projectPaths = getProjectConversationPaths();
     for (const link of getRecentLinks()) {
