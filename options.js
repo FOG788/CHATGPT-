@@ -5,6 +5,8 @@ const DEFAULTS = {
   enableNavShortcuts: false,
   enableRandomThreadButton: false,
   enableAutoScrollRecent: false,
+  enableDeleteTimerDisplay: false,
+  deleteTimerDurationMs: 300000,
   autoScrollIntervalMs: 60000,
   autoScrollMaxRuns: 20,
   autoScrollStepWaitMs: 2000,
@@ -12,6 +14,7 @@ const DEFAULTS = {
 };
 
 const NUMERIC_SETTING_KEYS = [
+  "deleteTimerDurationMs",
   "autoScrollIntervalMs",
   "autoScrollMaxRuns",
   "autoScrollStepWaitMs",
@@ -45,6 +48,9 @@ function loadCheckboxes(data) {
 }
 
 function loadNumericInputs(data) {
+  document.getElementById("deleteTimerMin").value = String(
+    Math.round((data.deleteTimerDurationMs || 300000) / 60000),
+  );
   document.getElementById("autoScrollIntervalMin").value = String(
     Math.round((data.autoScrollIntervalMs || 60000) / 60000),
   );
@@ -70,6 +76,8 @@ function buildPayload() {
     payload[key] = document.getElementById(key).checked;
   }
 
+  payload.deleteTimerDurationMs =
+    clamp(document.getElementById("deleteTimerMin").value, 1, 1440, 5) * 60000;
   payload.autoScrollIntervalMs =
     clamp(document.getElementById("autoScrollIntervalMin").value, 1, 30, 1) * 60000;
   payload.autoScrollMaxRuns = clamp(document.getElementById("autoScrollMaxRuns").value, 1, 200, 20);
