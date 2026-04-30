@@ -171,6 +171,9 @@
     return [...document.querySelectorAll('nav a[href*="/c/"]')];
   }
 
+  const projectConversationCache = new Map();
+  const projectConversationInFlight = new Set();
+
   function isProjectConversationLink(link) {
     if (!link) return false;
 
@@ -183,13 +186,89 @@
     return !!projectContainer;
   }
 
+
+
+  function getConversationIdFromHref(href) {
+    const path = hrefPath(href || "");
+    const m = path.match(/\/c\/([^/?#]+)/);
+    return m ? m[1] : null;
+  }
+
+  async function isProjectConversationId(conversationId) {
+    if (!conversationId) return false;
+    if (projectConversationCache.has(conversationId)) return projectConversationCache.get(conversationId);
+    if (projectConversationInFlight.has(conversationId)) return false;
+
+    projectConversationInFlight.add(conversationId);
+    try {
+      const token = await getToken();
+      const res = await fetch(`/backend-api/conversation/${conversationId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("conversation fetch failed");
+      const data = await res.json();
+      const isProject = !!(
+        data?.project_id ||
+        data?.projectId ||
+        data?.workspace_id ||
+        data?.workspaceId ||
+        data?.conversation?.project_id ||
+        data?.conversation?.projectId
+      );
+      projectConversationCache.set(conversationId, isProject);
+      return isProject;
+    } catch {
+      projectConversationCache.set(conversationId, false);
+      return false;
+    } finally {
+      projectConversationInFlight.delete(conversationId);
+    }
+  }
+
+  function refreshProjectConversationFlags() {
+    for (const link of getRecentLinks()) {
+      const id = getConversationIdFromHref(link.href || link.getAttribute("href"));
+      if (!id || projectConversationCache.has(id) || projectConversationInFlight.has(id)) continue;
+      isProjectConversationId(id).then(() => {
+        hideProjectRecentItems();
+        refreshRecentCountUI();
+      });
+    }
+  }
+
+
+  // Backward-compatible shim for older call sites.
+  function getProjectConversationPaths() {
+    return new Set();
+  }
+
+
+  function getNonRecentConversationPaths() {
+    const recentLinks = new Set(getRecentLinks());
+    const paths = new Set();
+    for (const link of document.querySelectorAll('nav a[href*="/c/"]')) {
+      if (recentLinks.has(link)) continue;
+      const path = hrefPath(link.href || link.getAttribute("href"));
+      if (path) paths.add(path);
+    }
+    return paths;
+  }
+
   function hideProjectRecentItems() {
+    const nonRecentPaths = getNonRecentConversationPaths();
     for (const link of getRecentLinks()) {
       const row =
         link.closest('li, [role="listitem"], [data-testid*="conversation" i], [data-testid*="thread" i]');
       if (!row) continue;
 
-      if (isProjectConversationLink(link)) {
+      const href = link.href || link.getAttribute("href");
+      const id = getConversationIdFromHref(href);
+      const path = hrefPath(href || "");
+      const shouldHide =
+        isProjectConversationLink(link) ||
+        (id && projectConversationCache.get(id) === true) ||
+        (path && nonRecentPaths.has(path));
+      if (shouldHide) {
         row.style.display = "none";
         row.setAttribute("data-cgpt-hidden-project", "1");
       } else if (row.getAttribute("data-cgpt-hidden-project") === "1") {
@@ -200,7 +279,17 @@
   }
 
   function getRecentCount() {
-    return getRecentLinks().filter((link) => !isProjectConversationLink(link)).length;
+    const nonRecentPaths = getNonRecentConversationPaths();
+    return getRecentLinks().filter((link) => {
+      const href = link.href || link.getAttribute("href");
+      const id = getConversationIdFromHref(href);
+      const path = hrefPath(href || "");
+      return (
+        !isProjectConversationLink(link) &&
+        !(id && projectConversationCache.get(id) === true) &&
+        !(path && nonRecentPaths.has(path))
+      );
+    }).length;
   }
 
   function getConversationLinks() {
@@ -339,6 +428,7 @@
   function rerender() {
     injectStyle();
     hideProjectRecentItems();
+    refreshProjectConversationFlags();
     if (!isConversation()) {
       removeInlineUI();
       return;
@@ -538,6 +628,7 @@
         (settings.enableRandomThreadButton && anchor && (!randomBtn || randomBtn.parentElement !== anchor)) ||
         (inlineNeeded && anchor && (!slot || slot.parentElement !== anchor));
       hideProjectRecentItems();
+    refreshProjectConversationFlags();
       if (needsRepair) rerender();
       if (settings.enableAutoScrollRecent) autoScrollRecentIfNeeded();
       healTimer = setTimeout(tick, 1500);
