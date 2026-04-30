@@ -153,7 +153,21 @@
     return document.querySelector("form") || document.querySelector("textarea")?.parentElement || null;
   }
 
+  function getRecentSectionContainers() {
+    const labels = ["recent", "recents", "最近"];
+    const nodes = [...document.querySelectorAll('nav section, nav div, nav [role="group"], nav li')];
+    return nodes.filter((node) => {
+      const text = (node.textContent || "").toLowerCase();
+      return labels.some((label) => text.includes(label));
+    });
+  }
+
   function getRecentLinks() {
+    const containers = getRecentSectionContainers();
+    if (containers.length) {
+      const links = containers.flatMap((node) => [...node.querySelectorAll('a[href*="/c/"]')]);
+      if (links.length) return links;
+    }
     return [...document.querySelectorAll('nav a[href*="/c/"]')];
   }
 
@@ -172,7 +186,7 @@
   function hideProjectRecentItems() {
     for (const link of getRecentLinks()) {
       const row =
-        link.closest('li, [role="listitem"], [data-testid*="conversation" i], [data-testid*="thread" i], div');
+        link.closest('li, [role="listitem"], [data-testid*="conversation" i], [data-testid*="thread" i]');
       if (!row) continue;
 
       if (isProjectConversationLink(link)) {
