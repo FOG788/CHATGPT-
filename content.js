@@ -727,6 +727,19 @@
           return;
         }
       }
+      for (const item of getSnippetList()) {
+        if (item.shortcut && matchesShortcut(e, item.shortcut)) {
+          e.preventDefault();
+          applySnippet(item.text);
+          return;
+        }
+      }
+    }, true);
+  }
+
+  function installFocusTracker() {
+    document.addEventListener("focusin", (e) => {
+      rememberComposerFocus(e.target);
     }, true);
   }
 
