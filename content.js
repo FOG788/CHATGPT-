@@ -420,40 +420,8 @@
 
     if (input.isContentEditable || input.getAttribute("contenteditable") === "true") {
       input.focus();
-      const before = input.textContent || input.innerText || "";
-      const sel = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(input);
-      range.collapse(false);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-
-      let inserted = false;
-      try {
-        const dt = new DataTransfer();
-        dt.setData("text/plain", text);
-        const pasteEvt = new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: dt });
-        inserted = input.dispatchEvent(pasteEvt);
-      } catch {}
-      if (!inserted) {
-        try {
-          inserted = !!document.execCommand?.("insertText", false, text);
-        } catch {}
-      }
-      if (!inserted) {
-        const node = document.createTextNode(text);
-        range.insertNode(node);
-        range.setStartAfter(node);
-        range.collapse(true);
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-      }
-      input.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: text, inputType: "insertText" }));
-      input.dispatchEvent(new InputEvent("input", { bubbles: true, data: text, inputType: "insertText" }));
-      if ((input.textContent || input.innerText || "") === before) {
-        input.textContent = `${before}${text}`;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      }
+      document.execCommand("insertText", false, text);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
       input.dispatchEvent(new Event("change", { bubbles: true }));
     }
   }
@@ -759,6 +727,19 @@
           return;
         }
       }
+      for (const item of getSnippetList()) {
+        if (item.shortcut && matchesShortcut(e, item.shortcut)) {
+          e.preventDefault();
+          applySnippet(item.text);
+          return;
+        }
+      }
+    }, true);
+  }
+
+  function installFocusTracker() {
+    document.addEventListener("focusin", (e) => {
+      rememberComposerFocus(e.target);
     }, true);
   }
 
