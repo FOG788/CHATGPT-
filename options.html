@@ -45,11 +45,17 @@
     <div class="subrow">上へ移動ショートカット: <input type="text" id="shortcutNavUp" value="Alt+K"></div>
     <div class="subrow">ランダム移動ショートカット: <input type="text" id="shortcutRandom" value="Alt+R"></div>
     <div class="row"><div><label>定型文（5個）</label><div class="desc">入力欄の左にボタン表示。クリックまたはショートカットで入力欄に挿入</div></div></div>
-    <div class="subrow">① <input type="text" id="snippet1Text" value="お疲れさまです。要点だけ3つでお願いします。"> ショートカット <input type="text" id="snippet1Shortcut" value="Alt+1"></div>
-    <div class="subrow">② <input type="text" id="snippet2Text" value="結論→理由→次アクションの順で整理してください。"> ショートカット <input type="text" id="snippet2Shortcut" value="Alt+2"></div>
-    <div class="subrow">③ <input type="text" id="snippet3Text" value="小学生にもわかる言葉で説明してください。"> ショートカット <input type="text" id="snippet3Shortcut" value="Alt+3"></div>
-    <div class="subrow">④ <input type="text" id="snippet4Text" value="この内容を箇条書きで5行以内に要約してください。"> ショートカット <input type="text" id="snippet4Shortcut" value="Alt+4"></div>
-    <div class="subrow">⑤ <input type="text" id="snippet5Text" value="この文章を丁寧語に書き換えてください。"> ショートカット <input type="text" id="snippet5Shortcut" value="Alt+5"></div>
+    <div class="subrow">① ボタン名 <input type="text" id="snippet1Label" value="定型1"> 文面 <input type="text" id="snippet1Text" value="お疲れさまです。要点だけ3つでお願いします。"> ショートカット <input type="text" id="snippet1Shortcut" value="Alt+1"></div>
+    <div class="subrow">② ボタン名 <input type="text" id="snippet2Label" value="定型2"> 文面 <input type="text" id="snippet2Text" value="結論→理由→次アクションの順で整理してください。"> ショートカット <input type="text" id="snippet2Shortcut" value="Alt+2"></div>
+    <div class="subrow">③ ボタン名 <input type="text" id="snippet3Label" value="定型3"> 文面 <input type="text" id="snippet3Text" value="小学生にもわかる言葉で説明してください。"> ショートカット <input type="text" id="snippet3Shortcut" value="Alt+3"></div>
+    <div class="subrow">④ ボタン名 <input type="text" id="snippet4Label" value="定型4"> 文面 <input type="text" id="snippet4Text" value="この内容を箇条書きで5行以内に要約してください。"> ショートカット <input type="text" id="snippet4Shortcut" value="Alt+4"></div>
+    <div class="subrow">⑤ ボタン名 <input type="text" id="snippet5Label" value="定型5"> 文面 <input type="text" id="snippet5Text" value="この文章を丁寧語に書き換えてください。"> ショートカット <input type="text" id="snippet5Shortcut" value="Alt+5"></div>
+    <div class="subrow">定型文ボタン横幅: <input type="number" id="snippetButtonWidthPx" min="56" max="320" step="1" value="88"> px</div>
+
+    <div class="row"><div><label>表示位置・幅</label><div class="desc">左下ボタン群の位置と、メイン文章の最大幅を調整</div></div></div>
+    <div class="subrow">ボタン群 左位置: <input type="number" id="railLeftPx" min="0" max="1600" step="1" value="340"> px</div>
+    <div class="subrow">ボタン群 下位置: <input type="number" id="railBottomPx" min="0" max="1200" step="1" value="150"> px</div>
+    <div class="subrow">メイン文章 最大幅: <input type="number" id="mainTextMaxWidthPx" min="480" max="2000" step="1" value="760"> px</div>
 
     <div class="row"><input type="checkbox" id="enableAutoScrollRecent"><div><label for="enableAutoScrollRecent">自動スクロール</label><div class="desc">左のスレッド一覧を定期的に下までスクロールする</div></div></div>
     <div class="subrow">最近件数しきい値: <input type="number" id="autoScrollRecentThreshold" min="1" max="1000" step="1" value="100"> <span>以下で実行</span></div>
