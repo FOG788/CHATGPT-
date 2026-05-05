@@ -176,7 +176,7 @@
   }
 
   function findComposerInput() {
-    return document.querySelector('form textarea, textarea, form [contenteditable="true"][data-placeholder], [contenteditable="true"][data-placeholder]');
+    return document.querySelector('form textarea, textarea, form [contenteditable="true"], [contenteditable="true"][role="textbox"]');
   }
 
   function findAnchor() {
@@ -385,12 +385,13 @@
     }
     const rect = anchor.getBoundingClientRect();
     rail.style.left = `${Math.max(12, rect.left - 380)}px`;
-    rail.style.top = `${Math.max(12, rect.top + 8)}px`;
+    rail.style.top = `${Math.max(12, rect.top - 26)}px`;
     return rail;
   }
 
   function applySnippet(text) {
-    const input = findComposerInput();
+    const formInput = document.querySelector('form textarea, form [contenteditable="true"], form [contenteditable="true"][role="textbox"]');
+    const input = formInput || findComposerInput();
     if (!input) return;
 
     if (input.tagName === "TEXTAREA") {
@@ -407,9 +408,9 @@
       return;
     }
 
-    if (input.isContentEditable) {
+    if (input.isContentEditable || input.getAttribute("contenteditable") === "true") {
       input.focus();
-      const before = input.textContent || "";
+      const before = input.textContent || input.innerText || "";
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const range = sel.getRangeAt(0);
@@ -426,10 +427,12 @@
       document.execCommand?.("insertText", false, text);
       input.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: text, inputType: "insertText" }));
       input.dispatchEvent(new InputEvent("input", { bubbles: true, data: text, inputType: "insertText" }));
-      if ((input.textContent || "") === before) {
-        input.textContent = before + text;
+      const after = input.textContent || input.innerText || "";
+      if (after === before) {
+        input.textContent = `${before}${text}`;
         input.dispatchEvent(new Event("input", { bubbles: true }));
       }
+      input.dispatchEvent(new Event("change", { bubbles: true }));
       input.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "a" }));
     }
   }
