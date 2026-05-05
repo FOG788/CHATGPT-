@@ -166,9 +166,11 @@
       #${IDS.settings},#${IDS.random},#${IDS.navPrev},#${IDS.navNext}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
       #${IDS.random}{background:#0f766e}
       #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
+      #${IDS.navPrev}{order:-10;display:block;margin-right:auto}
+      #${IDS.navNext}{order:10;display:block;margin-right:auto}
       #${IDS.snippets}{display:flex;gap:6px;align-items:center;margin-right:8px;flex:0 0 auto}
       #${IDS.snippets} button{height:30px;padding:0 10px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px}
-      #${IDS.rail}{position:fixed;display:flex;flex-wrap:wrap;gap:8px;max-width:360px;z-index:2147483640}
+      #${IDS.rail}{position:fixed;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;max-width:360px;z-index:2147483640}
     `;
     document.documentElement.appendChild(style);
   }
@@ -345,6 +347,8 @@
         navigate(-1);
       });
     }
+    prev.style.marginBottom = "18px";
+    prev.style.marginLeft = "0";
     let next = document.getElementById(nextId);
     if (!next) {
       next = document.createElement("button");
@@ -358,6 +362,8 @@
         navigate(1);
       });
     }
+    next.style.marginTop = "18px";
+    next.style.marginLeft = "0";
     if (prev.parentElement !== anchor) anchor.prepend(prev);
     if (next.parentElement !== anchor) anchor.prepend(next);
   }
@@ -403,6 +409,7 @@
 
     if (input.isContentEditable) {
       input.focus();
+      const before = input.textContent || "";
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const range = sel.getRangeAt(0);
@@ -416,8 +423,14 @@
       } else {
         input.textContent = (input.textContent || "") + text;
       }
-      input.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, data: text, inputType: "insertText" }));
+      document.execCommand?.("insertText", false, text);
+      input.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: text, inputType: "insertText" }));
       input.dispatchEvent(new InputEvent("input", { bubbles: true, data: text, inputType: "insertText" }));
+      if ((input.textContent || "") === before) {
+        input.textContent = before + text;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      input.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "a" }));
     }
   }
 
