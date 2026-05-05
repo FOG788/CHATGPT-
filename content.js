@@ -170,7 +170,7 @@
       #${IDS.navNext}{order:10;display:block;margin-right:auto}
       #${IDS.snippets}{display:flex;gap:6px;align-items:center;margin-right:8px;flex:0 0 auto}
       #${IDS.snippets} button{height:30px;padding:0 10px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px}
-      #${IDS.rail}{position:fixed;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;max-width:360px;z-index:2147483640}
+      #${IDS.rail}{position:fixed;left:340px;bottom:150px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;max-width:360px;z-index:2147483640}
     `;
     document.documentElement.appendChild(style);
   }
@@ -383,9 +383,10 @@
       rail.id = IDS.rail;
       document.body.appendChild(rail);
     }
-    const rect = anchor.getBoundingClientRect();
-    rail.style.left = `${Math.max(12, rect.left - 380)}px`;
-    rail.style.top = `${Math.max(12, rect.top - 72)}px`;
+    // Keep controls fixed regardless of viewport width changes.
+    rail.style.left = "340px";
+    rail.style.bottom = "150px";
+    rail.style.top = "auto";
     return rail;
   }
 
@@ -420,8 +421,16 @@
 
       let inserted = false;
       try {
-        inserted = !!document.execCommand?.("insertText", false, text);
+        const dt = new DataTransfer();
+        dt.setData("text/plain", text);
+        const pasteEvt = new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: dt });
+        inserted = input.dispatchEvent(pasteEvt);
       } catch {}
+      if (!inserted) {
+        try {
+          inserted = !!document.execCommand?.("insertText", false, text);
+        } catch {}
+      }
       if (!inserted) {
         const node = document.createTextNode(text);
         range.insertNode(node);
