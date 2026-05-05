@@ -146,8 +146,7 @@
       #${IDS.settings},#${IDS.random},#${IDS.navPrev},#${IDS.navNext}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
       #${IDS.random}{background:#0f766e}
       #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
-      #${IDS.navPrev}{order:-10;display:block;margin-right:auto}
-      #${IDS.navNext}{order:10;display:block;margin-right:auto}
+      #${IDS.navPrev},#${IDS.navNext}{display:block;margin:0}
       #${IDS.snippets}{display:flex;flex-direction:column;gap:6px;align-items:stretch;margin-right:8px;flex:0 0 auto}
       #${IDS.snippets} button{height:30px;padding:0 10px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px;text-align:left}
       #${IDS.rail}{position:fixed;left:340px;bottom:150px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;max-width:360px;z-index:2147483640}
@@ -333,8 +332,7 @@
         navigate(-1);
       });
     }
-    prev.style.marginBottom = "18px";
-    prev.style.marginLeft = "0";
+    prev.style.margin = "0";
     let next = document.getElementById(nextId);
     if (!next) {
       next = document.createElement("button");
@@ -348,10 +346,9 @@
         navigate(1);
       });
     }
-    next.style.marginTop = "18px";
-    next.style.marginLeft = "0";
-    if (prev.parentElement !== anchor) anchor.prepend(prev);
-    if (next.parentElement !== anchor) anchor.prepend(next);
+    next.style.margin = "0";
+    if (prev.parentElement !== anchor) anchor.appendChild(prev);
+    if (next.parentElement !== anchor) anchor.appendChild(next);
   }
 
   function getSnippetList() {
@@ -385,8 +382,20 @@
       document.documentElement.appendChild(style);
     }
     style.textContent = `
-      main article, main [class*="prose"], main .markdown, main .whitespace-pre-wrap {
-        max-width: ${settings.mainTextMaxWidthPx}px !important;
+      main article,
+      main [class*="prose"],
+      main .markdown,
+      main .whitespace-pre-wrap,
+      main [class*="max-w-"] {
+        max-width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
+      }
+      main [class*="mx-auto"] {
+        width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
+      }
+      main form,
+      main form > div,
+      main form [class*="max-w-"] {
+        max-width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
       }
     `;
   }
