@@ -18,6 +18,7 @@
     #disableAll{background:#e5e7eb;color:#111827}
     #status{margin-top:16px;font-weight:700}
     input[type="number"]{width:90px;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px}
+    input[type="text"]{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;min-width:180px}
     .subrow{margin-left:28px;padding-top:4px;color:#6b7280;font-size:13px}
   </style>
 </head>
@@ -43,6 +44,12 @@
     <div class="subrow">下へ移動ショートカット: <input type="text" id="shortcutNavDown" value="Alt+J"></div>
     <div class="subrow">上へ移動ショートカット: <input type="text" id="shortcutNavUp" value="Alt+K"></div>
     <div class="subrow">ランダム移動ショートカット: <input type="text" id="shortcutRandom" value="Alt+R"></div>
+    <div class="row"><div><label>定型文（5個）</label><div class="desc">入力欄の左にボタン表示。クリックまたはショートカットで入力欄に挿入</div></div></div>
+    <div class="subrow">① <input type="text" id="snippet1Text" value="お疲れさまです。要点だけ3つでお願いします。"> ショートカット <input type="text" id="snippet1Shortcut" value="Alt+1"></div>
+    <div class="subrow">② <input type="text" id="snippet2Text" value="結論→理由→次アクションの順で整理してください。"> ショートカット <input type="text" id="snippet2Shortcut" value="Alt+2"></div>
+    <div class="subrow">③ <input type="text" id="snippet3Text" value="小学生にもわかる言葉で説明してください。"> ショートカット <input type="text" id="snippet3Shortcut" value="Alt+3"></div>
+    <div class="subrow">④ <input type="text" id="snippet4Text" value="この内容を箇条書きで5行以内に要約してください。"> ショートカット <input type="text" id="snippet4Shortcut" value="Alt+4"></div>
+    <div class="subrow">⑤ <input type="text" id="snippet5Text" value="この文章を丁寧語に書き換えてください。"> ショートカット <input type="text" id="snippet5Shortcut" value="Alt+5"></div>
 
     <div class="row"><input type="checkbox" id="enableAutoScrollRecent"><div><label for="enableAutoScrollRecent">自動スクロール</label><div class="desc">左のスレッド一覧を定期的に下までスクロールする</div></div></div>
     <div class="subrow">最近件数しきい値: <input type="number" id="autoScrollRecentThreshold" min="1" max="1000" step="1" value="100"> <span>以下で実行</span></div>
