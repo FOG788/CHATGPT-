@@ -37,6 +37,7 @@
     navPrev: "cgpt-nav-prev",
     navNext: "cgpt-nav-next",
     snippets: "cgpt-snippets",
+    rail: "cgpt-left-rail",
     style: "cgpt-inline-style",
     toast: "cgpt-inline-toast",
   };
@@ -167,6 +168,7 @@
       #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
       #${IDS.snippets}{display:flex;gap:6px;align-items:center;margin-right:8px;flex:0 0 auto}
       #${IDS.snippets} button{height:30px;padding:0 10px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px}
+      #${IDS.rail}{position:fixed;display:flex;flex-wrap:wrap;gap:8px;max-width:360px;z-index:2147483640}
     `;
     document.documentElement.appendChild(style);
   }
@@ -368,6 +370,19 @@
     })).filter((item) => item.text);
   }
 
+  function ensureRail(anchor) {
+    let rail = document.getElementById(IDS.rail);
+    if (!rail) {
+      rail = document.createElement("div");
+      rail.id = IDS.rail;
+      document.body.appendChild(rail);
+    }
+    const rect = anchor.getBoundingClientRect();
+    rail.style.left = `${Math.max(12, rect.left - 380)}px`;
+    rail.style.top = `${Math.max(12, rect.top + 8)}px`;
+    return rail;
+  }
+
   function applySnippet(text) {
     const input = findComposerInput();
     if (!input) return;
@@ -388,7 +403,20 @@
 
     if (input.isContentEditable) {
       input.focus();
-      document.execCommand("insertText", false, text);
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        const node = document.createTextNode(text);
+        range.insertNode(node);
+        range.setStartAfter(node);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        input.textContent = (input.textContent || "") + text;
+      }
+      input.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, data: text, inputType: "insertText" }));
       input.dispatchEvent(new InputEvent("input", { bubbles: true, data: text, inputType: "insertText" }));
     }
   }
@@ -427,6 +455,7 @@
     document.getElementById(IDS.navPrev)?.remove();
     document.getElementById(IDS.navNext)?.remove();
     document.getElementById(IDS.snippets)?.remove();
+    document.getElementById(IDS.rail)?.remove();
   }
 
   function rerender() {
@@ -438,11 +467,12 @@
 
     const anchor = findAnchor();
     if (!anchor) return;
+    const rail = ensureRail(anchor);
 
-    ensureSettingsButton(anchor);
-    ensureRandomButton(anchor);
-    ensureNavButtons(anchor);
-    ensureSnippetButtons(anchor);
+    ensureSettingsButton(rail);
+    ensureRandomButton(rail);
+    ensureNavButtons(rail);
+    ensureSnippetButtons(rail);
 
     const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton();
     let slot = document.getElementById(IDS.slot);
@@ -485,7 +515,7 @@
       slot.appendChild(btn);
     }
 
-    if (slot.parentElement !== anchor) anchor.prepend(slot);
+    if (slot.parentElement !== rail) rail.appendChild(slot);
   }
 
   function startRecentCountAutoRefresh() {
