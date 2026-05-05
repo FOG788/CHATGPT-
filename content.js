@@ -16,6 +16,16 @@
     autoScrollMaxRuns: 20,
     autoScrollStepWaitMs: 2000,
     autoScrollRecentThreshold: 100,
+    snippet1Text: "お疲れさまです。要点だけ3つでお願いします。",
+    snippet1Shortcut: "Alt+1",
+    snippet2Text: "結論→理由→次アクションの順で整理してください。",
+    snippet2Shortcut: "Alt+2",
+    snippet3Text: "小学生にもわかる言葉で説明してください。",
+    snippet3Shortcut: "Alt+3",
+    snippet4Text: "この内容を箇条書きで5行以内に要約してください。",
+    snippet4Shortcut: "Alt+4",
+    snippet5Text: "この文章を丁寧語に書き換えてください。",
+    snippet5Shortcut: "Alt+5",
   };
 
   const IDS = {
@@ -26,6 +36,7 @@
     random: "cgpt-random-thread",
     navPrev: "cgpt-nav-prev",
     navNext: "cgpt-nav-next",
+    snippets: "cgpt-snippets",
     style: "cgpt-inline-style",
     toast: "cgpt-inline-toast",
   };
@@ -154,12 +165,15 @@
       #${IDS.settings},#${IDS.random},#${IDS.navPrev},#${IDS.navNext}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
       #${IDS.random}{background:#0f766e}
       #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
+      #${IDS.snippets}{display:flex;gap:6px;align-items:center;margin-right:8px;flex:0 0 auto}
+      #${IDS.snippets} button{height:30px;padding:0 10px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px}
     `;
     document.documentElement.appendChild(style);
   }
 
   function findAnchor() {
-    return document.querySelector("form") || document.querySelector("textarea")?.parentElement || null;
+    const textarea = document.querySelector("form textarea, textarea");
+    return textarea?.parentElement || document.querySelector("form") || null;
   }
 
   function getRecentLinks() {
@@ -334,12 +348,60 @@
     if (next.parentElement !== anchor) anchor.prepend(next);
   }
 
+  function getSnippetList() {
+    return [1, 2, 3, 4, 5].map((n) => ({
+      text: String(settings[`snippet${n}Text`] || "").trim(),
+      shortcut: String(settings[`snippet${n}Shortcut`] || "").trim(),
+      index: n,
+    })).filter((item) => item.text);
+  }
+
+  function applySnippet(text) {
+    const textarea = document.querySelector("form textarea, textarea");
+    if (!textarea) return;
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? textarea.value.length;
+    textarea.value = `${textarea.value.slice(0, start)}${text}${textarea.value.slice(end)}`;
+    const caret = start + text.length;
+    textarea.setSelectionRange(caret, caret);
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    textarea.focus();
+  }
+
+  function ensureSnippetButtons(anchor) {
+    const snippets = getSnippetList();
+    let wrap = document.getElementById(IDS.snippets);
+    if (!snippets.length) {
+      wrap?.remove();
+      return;
+    }
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.id = IDS.snippets;
+    }
+    wrap.innerHTML = "";
+    for (const item of snippets) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = `定型${item.index}`;
+      btn.title = item.shortcut ? `${item.shortcut}: ${item.text}` : item.text;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        applySnippet(item.text);
+      });
+      wrap.appendChild(btn);
+    }
+    if (wrap.parentElement !== anchor) anchor.prepend(wrap);
+  }
+
   function removeInlineUI() {
     document.getElementById(IDS.slot)?.remove();
     document.getElementById(IDS.settings)?.remove();
     document.getElementById(IDS.random)?.remove();
     document.getElementById(IDS.navPrev)?.remove();
     document.getElementById(IDS.navNext)?.remove();
+    document.getElementById(IDS.snippets)?.remove();
   }
 
   function rerender() {
@@ -355,6 +417,7 @@
     ensureSettingsButton(anchor);
     ensureRandomButton(anchor);
     ensureNavButtons(anchor);
+    ensureSnippetButtons(anchor);
 
     const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton();
     let slot = document.getElementById(IDS.slot);
@@ -594,6 +657,14 @@
       if (settings.enableDeleteShortcut && matchesShortcut(e, settings.shortcutDelete)) {
         e.preventDefault();
         deleteCurrentThread();
+        return;
+      }
+      for (const item of getSnippetList()) {
+        if (item.shortcut && matchesShortcut(e, item.shortcut)) {
+          e.preventDefault();
+          applySnippet(item.text);
+          return;
+        }
       }
     }, true);
   }
