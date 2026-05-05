@@ -385,7 +385,7 @@
     }
     const rect = anchor.getBoundingClientRect();
     rail.style.left = `${Math.max(12, rect.left - 380)}px`;
-    rail.style.top = `${Math.max(12, rect.top - 26)}px`;
+    rail.style.top = `${Math.max(12, rect.top - 72)}px`;
     return rail;
   }
 
@@ -412,28 +412,30 @@
       input.focus();
       const before = input.textContent || input.innerText || "";
       const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        range.deleteContents();
+      const range = document.createRange();
+      range.selectNodeContents(input);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+
+      let inserted = false;
+      try {
+        inserted = !!document.execCommand?.("insertText", false, text);
+      } catch {}
+      if (!inserted) {
         const node = document.createTextNode(text);
         range.insertNode(node);
         range.setStartAfter(node);
         range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-      } else {
-        input.textContent = (input.textContent || "") + text;
+        sel?.removeAllRanges();
+        sel?.addRange(range);
       }
-      document.execCommand?.("insertText", false, text);
       input.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, data: text, inputType: "insertText" }));
       input.dispatchEvent(new InputEvent("input", { bubbles: true, data: text, inputType: "insertText" }));
-      const after = input.textContent || input.innerText || "";
-      if (after === before) {
+      if ((input.textContent || input.innerText || "") === before) {
         input.textContent = `${before}${text}`;
         input.dispatchEvent(new Event("input", { bubbles: true }));
       }
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      input.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "a" }));
     }
   }
 
