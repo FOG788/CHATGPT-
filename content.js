@@ -16,6 +16,16 @@
     autoScrollMaxRuns: 20,
     autoScrollStepWaitMs: 2000,
     autoScrollRecentThreshold: 100,
+    snippet1Text: "お疲れさまです。要点だけ3つでお願いします。",
+    snippet1Shortcut: "Alt+1",
+    snippet2Text: "結論→理由→次アクションの順で整理してください。",
+    snippet2Shortcut: "Alt+2",
+    snippet3Text: "小学生にもわかる言葉で説明してください。",
+    snippet3Shortcut: "Alt+3",
+    snippet4Text: "この内容を箇条書きで5行以内に要約してください。",
+    snippet4Shortcut: "Alt+4",
+    snippet5Text: "この文章を丁寧語に書き換えてください。",
+    snippet5Shortcut: "Alt+5",
   };
 
   const IDS = {
@@ -26,6 +36,8 @@
     random: "cgpt-random-thread",
     navPrev: "cgpt-nav-prev",
     navNext: "cgpt-nav-next",
+    snippets: "cgpt-snippets",
+    rail: "cgpt-left-rail",
     style: "cgpt-inline-style",
     toast: "cgpt-inline-toast",
   };
@@ -44,6 +56,7 @@
   let lastAutoScrollAt = 0;
   let recentRefreshTimer = null;
   let recentCountDeferredTimer = null;
+  let lastFocusedComposer = null;
 
   function clamp(n, min, max, fallback) {
     n = Number(n);
@@ -154,12 +167,37 @@
       #${IDS.settings},#${IDS.random},#${IDS.navPrev},#${IDS.navNext}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
       #${IDS.random}{background:#0f766e}
       #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
+      #${IDS.navPrev}{order:-10;display:block;margin-right:auto}
+      #${IDS.navNext}{order:10;display:block;margin-right:auto}
+      #${IDS.snippets}{display:flex;gap:6px;align-items:center;margin-right:8px;flex:0 0 auto}
+      #${IDS.snippets} button{height:30px;padding:0 10px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px}
+      #${IDS.rail}{position:fixed;left:340px;bottom:150px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;max-width:360px;z-index:2147483640}
     `;
     document.documentElement.appendChild(style);
   }
 
+  function findComposerInput() {
+    return document.querySelector('form textarea, textarea, form [contenteditable="true"], [contenteditable="true"][role="textbox"]');
+  }
+
+  function rememberComposerFocus(target) {
+    if (!target) return;
+    const isText = target.tagName === "TEXTAREA" || target.tagName === "INPUT";
+    const isEditable = target.isContentEditable || target.getAttribute?.("contenteditable") === "true";
+    if (isText || isEditable) lastFocusedComposer = target;
+  }
+
   function findAnchor() {
-    return document.querySelector("form") || document.querySelector("textarea")?.parentElement || null;
+    const input = findComposerInput();
+    if (!input) return document.querySelector("form") || null;
+    let node = input.parentElement;
+    while (node && node.tagName !== "FORM") {
+      if (node.querySelector('button[data-testid*="send"], button[aria-label*="Send"], button[aria-label*="送信"]')) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return input.parentElement || document.querySelector("form") || null;
   }
 
   function getRecentLinks() {
@@ -317,6 +355,8 @@
         navigate(-1);
       });
     }
+    prev.style.marginBottom = "18px";
+    prev.style.marginLeft = "0";
     let next = document.getElementById(nextId);
     if (!next) {
       next = document.createElement("button");
@@ -330,8 +370,88 @@
         navigate(1);
       });
     }
+    next.style.marginTop = "18px";
+    next.style.marginLeft = "0";
     if (prev.parentElement !== anchor) anchor.prepend(prev);
     if (next.parentElement !== anchor) anchor.prepend(next);
+  }
+
+  function getSnippetList() {
+    return [1, 2, 3, 4, 5].map((n) => ({
+      text: String(settings[`snippet${n}Text`] || "").trim(),
+      shortcut: String(settings[`snippet${n}Shortcut`] || "").trim(),
+      index: n,
+    })).filter((item) => item.text);
+  }
+
+  function ensureRail(anchor) {
+    let rail = document.getElementById(IDS.rail);
+    if (!rail) {
+      rail = document.createElement("div");
+      rail.id = IDS.rail;
+      document.body.appendChild(rail);
+    }
+    // Keep controls fixed regardless of viewport width changes.
+    rail.style.left = "340px";
+    rail.style.bottom = "150px";
+    rail.style.top = "auto";
+    return rail;
+  }
+
+  function applySnippet(text) {
+    const formInput = document.querySelector('form textarea, form [contenteditable="true"], form [contenteditable="true"][role="textbox"]');
+    const input = lastFocusedComposer || formInput || findComposerInput();
+    if (!input) return;
+
+    if (input.tagName === "TEXTAREA") {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+      const start = input.selectionStart ?? input.value.length;
+      const end = input.selectionEnd ?? input.value.length;
+      const next = `${input.value.slice(0, start)}${text}${input.value.slice(end)}`;
+      if (setter) setter.call(input, next);
+      else input.value = next;
+      const caret = start + text.length;
+      input.setSelectionRange(caret, caret);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      input.focus();
+      return;
+    }
+
+    if (input.isContentEditable || input.getAttribute("contenteditable") === "true") {
+      input.focus();
+      document.execCommand("insertText", false, text);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+
+  function ensureSnippetButtons(anchor) {
+    const snippets = getSnippetList();
+    let wrap = document.getElementById(IDS.snippets);
+    if (!snippets.length) {
+      wrap?.remove();
+      return;
+    }
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.id = IDS.snippets;
+    }
+    wrap.innerHTML = "";
+    for (const item of snippets) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = `定型${item.index}`;
+      btn.title = item.shortcut ? `${item.shortcut}: ${item.text}` : item.text;
+      btn.addEventListener("mousedown", (e) => e.preventDefault());
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        applySnippet(item.text);
+      });
+      wrap.appendChild(btn);
+    }
+    if (wrap.parentElement !== anchor) anchor.prepend(wrap);
   }
 
   function removeInlineUI() {
@@ -340,6 +460,8 @@
     document.getElementById(IDS.random)?.remove();
     document.getElementById(IDS.navPrev)?.remove();
     document.getElementById(IDS.navNext)?.remove();
+    document.getElementById(IDS.snippets)?.remove();
+    document.getElementById(IDS.rail)?.remove();
   }
 
   function rerender() {
@@ -351,10 +473,12 @@
 
     const anchor = findAnchor();
     if (!anchor) return;
+    const rail = ensureRail(anchor);
 
-    ensureSettingsButton(anchor);
-    ensureRandomButton(anchor);
-    ensureNavButtons(anchor);
+    ensureSettingsButton(rail);
+    ensureRandomButton(rail);
+    ensureNavButtons(rail);
+    ensureSnippetButtons(rail);
 
     const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton();
     let slot = document.getElementById(IDS.slot);
@@ -397,7 +521,7 @@
       slot.appendChild(btn);
     }
 
-    if (slot.parentElement !== anchor) anchor.prepend(slot);
+    if (slot.parentElement !== rail) rail.appendChild(slot);
   }
 
   function startRecentCountAutoRefresh() {
@@ -594,7 +718,21 @@
       if (settings.enableDeleteShortcut && matchesShortcut(e, settings.shortcutDelete)) {
         e.preventDefault();
         deleteCurrentThread();
+        return;
       }
+      for (const item of getSnippetList()) {
+        if (item.shortcut && matchesShortcut(e, item.shortcut)) {
+          e.preventDefault();
+          applySnippet(item.text);
+          return;
+        }
+      }
+    }, true);
+  }
+
+  function installFocusTracker() {
+    document.addEventListener("focusin", (e) => {
+      rememberComposerFocus(e.target);
     }, true);
   }
 
@@ -649,6 +787,7 @@
     loadNextAutoScrollAt();
     injectStyle();
     installKeyboard();
+    installFocusTracker();
     hookHistory();
     installStorageListener();
     startRecentCountAutoRefresh();
