@@ -21,6 +21,7 @@
         "https://chatgpt.com/*"
       ],
       "js": [
+        "config.js",
         "content.js"
       ],
       "run_at": "document_idle"

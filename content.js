@@ -1,33 +1,7 @@
 (() => {
-  const DEFAULTS = {
-    enableDeleteButton: false,
-    enableRecentCount: false,
-    enableDeleteShortcut: false,
-    enableNavShortcuts: false,
-    enableRandomThreadButton: false,
-    enableThreadNavButtons: false,
-    enableAutoScrollRecent: false,
-    afterDeleteMoveMode: "random",
-    shortcutDelete: "Ctrl+Shift+Backspace",
-    shortcutNavDown: "Alt+J",
-    shortcutNavUp: "Alt+K",
-    shortcutRandom: "Alt+R",
-    autoScrollIntervalMs: 60000,
-    autoScrollMaxRuns: 20,
-    autoScrollStepWaitMs: 2000,
-    autoScrollRecentThreshold: 100,
-    snippet1Text: "お疲れさまです。要点だけ3つでお願いします。",
-    snippet1Shortcut: "Alt+1",
-    snippet2Text: "結論→理由→次アクションの順で整理してください。",
-    snippet2Shortcut: "Alt+2",
-    snippet3Text: "小学生にもわかる言葉で説明してください。",
-    snippet3Shortcut: "Alt+3",
-    snippet4Text: "この内容を箇条書きで5行以内に要約してください。",
-    snippet4Shortcut: "Alt+4",
-    snippet5Text: "この文章を丁寧語に書き換えてください。",
-    snippet5Shortcut: "Alt+5",
-  };
-
+  const SHARED = globalThis.ChatGPTThreadDeleterConfig || {};
+  const DEFAULTS = SHARED.DEFAULTS || {};
+  const matchesShortcut = SHARED.matchesShortcut || (() => false);
   const IDS = {
     slot: "cgpt-inline-slot",
     count: "cgpt-recent-count",
@@ -284,8 +258,7 @@
 
 
   function shouldShowDeleteButton() {
-    if (!settings.enableDeleteButton) return false;
-    return true;
+    return settings.enableDeleteButton;
   }
 
 
@@ -663,16 +636,17 @@
   function startHealingLoop() {
     if (healTimer) clearTimeout(healTimer);
     const tick = () => {
-      const anchor = findAnchor();
+      const rail = document.getElementById(IDS.rail);
       const settingsBtn = document.getElementById(IDS.settings);
       const slot = document.getElementById(IDS.slot);
       const randomBtn = document.getElementById(IDS.random);
       const inlineNeeded = settings.enableRecentCount || shouldShowDeleteButton();
       const needsRepair =
-        (anchor && settingsBtn && settingsBtn.parentElement !== anchor) ||
-        (anchor && !settingsBtn) ||
-        (settings.enableRandomThreadButton && anchor && (!randomBtn || randomBtn.parentElement !== anchor)) ||
-        (inlineNeeded && anchor && (!slot || slot.parentElement !== anchor));
+        (!rail) ||
+        (settingsBtn && settingsBtn.parentElement !== rail) ||
+        (!settingsBtn) ||
+        (settings.enableRandomThreadButton && (!randomBtn || randomBtn.parentElement !== rail)) ||
+        (inlineNeeded && (!slot || slot.parentElement !== rail));
       if (needsRepair) rerender();
       if (settings.enableAutoScrollRecent) autoScrollRecentIfNeeded();
       healTimer = setTimeout(tick, 1500);
@@ -681,24 +655,6 @@
   }
 
   function installKeyboard() {
-    const normalizeShortcut = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, "");
-    const matchesShortcut = (e, shortcut) => {
-      const raw = normalizeShortcut(shortcut);
-      if (!raw) return false;
-      const parts = raw.split("+").filter(Boolean);
-      const needCtrl = parts.includes("ctrl") || parts.includes("control");
-      const needMeta = parts.includes("cmd") || parts.includes("meta");
-      const needAlt = parts.includes("alt") || parts.includes("option");
-      const needShift = parts.includes("shift");
-      const key = parts[parts.length - 1];
-      if (!key) return false;
-      if (!!e.ctrlKey !== needCtrl) return false;
-      if (!!e.metaKey !== needMeta) return false;
-      if (!!e.altKey !== needAlt) return false;
-      if (!!e.shiftKey !== needShift) return false;
-      const eKey = (e.key || "").toLowerCase();
-      return eKey === key.toLowerCase();
-    };
     document.addEventListener("keydown", (e) => {
       if (settings.enableNavShortcuts && matchesShortcut(e, settings.shortcutNavDown)) {
         e.preventDefault();
@@ -727,19 +683,6 @@
           return;
         }
       }
-      for (const item of getSnippetList()) {
-        if (item.shortcut && matchesShortcut(e, item.shortcut)) {
-          e.preventDefault();
-          applySnippet(item.text);
-          return;
-        }
-      }
-    }, true);
-  }
-
-  function installFocusTracker() {
-    document.addEventListener("focusin", (e) => {
-      rememberComposerFocus(e.target);
     }, true);
   }
 
