@@ -56,6 +56,7 @@
   let lastAutoScrollAt = 0;
   let recentRefreshTimer = null;
   let recentCountDeferredTimer = null;
+  let lastFocusedComposer = null;
 
   function clamp(n, min, max, fallback) {
     n = Number(n);
@@ -177,6 +178,13 @@
 
   function findComposerInput() {
     return document.querySelector('form textarea, textarea, form [contenteditable="true"], [contenteditable="true"][role="textbox"]');
+  }
+
+  function rememberComposerFocus(target) {
+    if (!target) return;
+    const isText = target.tagName === "TEXTAREA" || target.tagName === "INPUT";
+    const isEditable = target.isContentEditable || target.getAttribute?.("contenteditable") === "true";
+    if (isText || isEditable) lastFocusedComposer = target;
   }
 
   function findAnchor() {
@@ -392,7 +400,7 @@
 
   function applySnippet(text) {
     const formInput = document.querySelector('form textarea, form [contenteditable="true"], form [contenteditable="true"][role="textbox"]');
-    const input = formInput || findComposerInput();
+    const input = lastFocusedComposer || formInput || findComposerInput();
     if (!input) return;
 
     if (input.tagName === "TEXTAREA") {
@@ -405,6 +413,7 @@
       const caret = start + text.length;
       input.setSelectionRange(caret, caret);
       input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
       input.focus();
       return;
     }
@@ -445,6 +454,7 @@
         input.textContent = `${before}${text}`;
         input.dispatchEvent(new Event("input", { bubbles: true }));
       }
+      input.dispatchEvent(new Event("change", { bubbles: true }));
     }
   }
 
@@ -465,6 +475,7 @@
       btn.type = "button";
       btn.textContent = `定型${item.index}`;
       btn.title = item.shortcut ? `${item.shortcut}: ${item.text}` : item.text;
+      btn.addEventListener("mousedown", (e) => e.preventDefault());
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -751,6 +762,12 @@
     }, true);
   }
 
+  function installFocusTracker() {
+    document.addEventListener("focusin", (e) => {
+      rememberComposerFocus(e.target);
+    }, true);
+  }
+
   function onPathChange() {
     if (location.pathname !== lastPath) {
       lastPath = location.pathname;
@@ -802,6 +819,7 @@
     loadNextAutoScrollAt();
     injectStyle();
     installKeyboard();
+    installFocusTracker();
     hookHistory();
     installStorageListener();
     startRecentCountAutoRefresh();
