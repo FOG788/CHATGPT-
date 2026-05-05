@@ -14,6 +14,7 @@
     rail: "cgpt-left-rail",
     style: "cgpt-inline-style",
     toast: "cgpt-inline-toast",
+    widthStyle: "cgpt-main-width-style",
   };
 
   const STORAGE_KEYS = {
@@ -44,6 +45,10 @@
     s.autoScrollMaxRuns = clamp(s.autoScrollMaxRuns, 1, 200, 20);
     s.autoScrollStepWaitMs = clamp(s.autoScrollStepWaitMs, 1000, 300000, 2000);
     s.autoScrollRecentThreshold = clamp(s.autoScrollRecentThreshold, 1, 1000, 100);
+    s.railLeftPx = clamp(s.railLeftPx, 0, 1600, 340);
+    s.railBottomPx = clamp(s.railBottomPx, 0, 1200, 150);
+    s.mainTextMaxWidthPx = clamp(s.mainTextMaxWidthPx, 480, 2000, 760);
+    s.snippetButtonWidthPx = clamp(s.snippetButtonWidthPx, 56, 320, 88);
     return s;
   }
 
@@ -143,8 +148,8 @@
       #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
       #${IDS.navPrev}{order:-10;display:block;margin-right:auto}
       #${IDS.navNext}{order:10;display:block;margin-right:auto}
-      #${IDS.snippets}{display:flex;gap:6px;align-items:center;margin-right:8px;flex:0 0 auto}
-      #${IDS.snippets} button{height:30px;padding:0 10px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px}
+      #${IDS.snippets}{display:flex;flex-direction:column;gap:6px;align-items:stretch;margin-right:8px;flex:0 0 auto}
+      #${IDS.snippets} button{height:30px;padding:0 10px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px;text-align:left}
       #${IDS.rail}{position:fixed;left:340px;bottom:150px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;max-width:360px;z-index:2147483640}
     `;
     document.documentElement.appendChild(style);
@@ -352,6 +357,7 @@
   function getSnippetList() {
     return [1, 2, 3, 4, 5].map((n) => ({
       text: String(settings[`snippet${n}Text`] || "").trim(),
+      label: String(settings[`snippet${n}Label`] || `定型${n}`).trim() || `定型${n}`,
       shortcut: String(settings[`snippet${n}Shortcut`] || "").trim(),
       index: n,
     })).filter((item) => item.text);
@@ -365,10 +371,24 @@
       document.body.appendChild(rail);
     }
     // Keep controls fixed regardless of viewport width changes.
-    rail.style.left = "340px";
-    rail.style.bottom = "150px";
+    rail.style.left = `${settings.railLeftPx}px`;
+    rail.style.bottom = `${settings.railBottomPx}px`;
     rail.style.top = "auto";
     return rail;
+  }
+
+  function applyMainWidthStyle() {
+    let style = document.getElementById(IDS.widthStyle);
+    if (!style) {
+      style = document.createElement("style");
+      style.id = IDS.widthStyle;
+      document.documentElement.appendChild(style);
+    }
+    style.textContent = `
+      main article, main [class*="prose"], main .markdown, main .whitespace-pre-wrap {
+        max-width: ${settings.mainTextMaxWidthPx}px !important;
+      }
+    `;
   }
 
   function applySnippet(text) {
@@ -414,7 +434,8 @@
     for (const item of snippets) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.textContent = `定型${item.index}`;
+      btn.textContent = item.label;
+      btn.style.width = `${settings.snippetButtonWidthPx}px`;
       btn.title = item.shortcut ? `${item.shortcut}: ${item.text}` : item.text;
       btn.addEventListener("mousedown", (e) => e.preventDefault());
       btn.addEventListener("click", (e) => {
@@ -447,6 +468,7 @@
     const anchor = findAnchor();
     if (!anchor) return;
     const rail = ensureRail(anchor);
+    applyMainWidthStyle();
 
     ensureSettingsButton(rail);
     ensureRandomButton(rail);
