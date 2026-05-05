@@ -4,7 +4,13 @@ const DEFAULTS = {
   enableDeleteShortcut: false,
   enableNavShortcuts: false,
   enableRandomThreadButton: false,
+  enableThreadNavButtons: false,
   enableAutoScrollRecent: false,
+  afterDeleteMoveMode: "random",
+  shortcutDelete: "Ctrl+Shift+Backspace",
+  shortcutNavDown: "Alt+J",
+  shortcutNavUp: "Alt+K",
+  shortcutRandom: "Alt+R",
   autoScrollIntervalMs: 60000,
   autoScrollMaxRuns: 20,
   autoScrollStepWaitMs: 2000,
@@ -17,6 +23,13 @@ const NUMERIC_SETTING_KEYS = [
   "autoScrollStepWaitMs",
   "autoScrollRecentThreshold",
 ];
+const TEXT_SETTING_KEYS = [
+  "afterDeleteMoveMode",
+  "shortcutDelete",
+  "shortcutNavDown",
+  "shortcutNavUp",
+  "shortcutRandom",
+];
 
 const STATUS_CLEAR_DELAY_MS = 1200;
 
@@ -27,7 +40,9 @@ function clamp(value, min, max, fallback) {
 }
 
 function getCheckboxSettingKeys() {
-  return Object.keys(DEFAULTS).filter((key) => !NUMERIC_SETTING_KEYS.includes(key));
+  return Object.keys(DEFAULTS).filter(
+    (key) => !NUMERIC_SETTING_KEYS.includes(key) && !TEXT_SETTING_KEYS.includes(key),
+  );
 }
 
 function setStatus(message) {
@@ -57,10 +72,18 @@ function loadNumericInputs(data) {
   );
 }
 
+function loadTextInputs(data) {
+  for (const key of TEXT_SETTING_KEYS) {
+    const el = document.getElementById(key);
+    if (el) el.value = String(data[key] ?? DEFAULTS[key] ?? "");
+  }
+}
+
 async function load() {
   const data = await chrome.storage.sync.get(DEFAULTS);
   loadCheckboxes(data);
   loadNumericInputs(data);
+  loadTextInputs(data);
 }
 
 function buildPayload() {
@@ -81,6 +104,10 @@ function buildPayload() {
     1000,
     100,
   );
+  for (const key of TEXT_SETTING_KEYS) {
+    const el = document.getElementById(key);
+    payload[key] = (el?.value || "").trim() || DEFAULTS[key];
+  }
 
   return payload;
 }
@@ -96,7 +123,16 @@ async function disableAll() {
   setStatus("全部オフにしました");
 }
 
+async function enableAll() {
+  const payload = { ...DEFAULTS };
+  for (const key of getCheckboxSettingKeys()) payload[key] = true;
+  await chrome.storage.sync.set(payload);
+  await load();
+  setStatus("全部オンにしました");
+}
+
 document.getElementById("save").addEventListener("click", save);
+document.getElementById("enableAll").addEventListener("click", enableAll);
 document.getElementById("disableAll").addEventListener("click", disableAll);
 
 load();
