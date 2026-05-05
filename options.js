@@ -15,6 +15,16 @@ const DEFAULTS = {
   autoScrollMaxRuns: 20,
   autoScrollStepWaitMs: 2000,
   autoScrollRecentThreshold: 100,
+  snippet1Text: "お疲れさまです。要点だけ3つでお願いします。",
+  snippet1Shortcut: "Alt+1",
+  snippet2Text: "結論→理由→次アクションの順で整理してください。",
+  snippet2Shortcut: "Alt+2",
+  snippet3Text: "小学生にもわかる言葉で説明してください。",
+  snippet3Shortcut: "Alt+3",
+  snippet4Text: "この内容を箇条書きで5行以内に要約してください。",
+  snippet4Shortcut: "Alt+4",
+  snippet5Text: "この文章を丁寧語に書き換えてください。",
+  snippet5Shortcut: "Alt+5",
 };
 
 const NUMERIC_SETTING_KEYS = [
@@ -29,6 +39,7 @@ const TEXT_SETTING_KEYS = [
   "shortcutNavDown",
   "shortcutNavUp",
   "shortcutRandom",
+  "snippet1Text","snippet1Shortcut","snippet2Text","snippet2Shortcut","snippet3Text","snippet3Shortcut","snippet4Text","snippet4Shortcut","snippet5Text","snippet5Shortcut",
 ];
 
 const STATUS_CLEAR_DELAY_MS = 1200;
