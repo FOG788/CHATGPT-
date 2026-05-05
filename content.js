@@ -6,6 +6,8 @@
     enableNavShortcuts: false,
     enableRandomThreadButton: false,
     enableAutoScrollRecent: false,
+    enableDeleteTimerDisplay: false,
+    deleteTimerDurationMs: 300000,
     autoScrollIntervalMs: 60000,
     autoScrollMaxRuns: 20,
     autoScrollStepWaitMs: 2000,
@@ -20,9 +22,11 @@
     random: "cgpt-random-thread",
     style: "cgpt-inline-style",
     toast: "cgpt-inline-toast",
+    timer: "cgpt-delete-timer",
   };
 
   const STORAGE_KEYS = {
+    deleteTimerEndsAt: "cgpt_delete_timer_ends_at",
     nextAutoScrollAt: "cgpt_next_auto_scroll_at",
   };
 
@@ -36,6 +40,8 @@
   let lastAutoScrollAt = 0;
   let recentRefreshTimer = null;
   let recentCountDeferredTimer = null;
+  let deleteTimerTicker = null;
+  let deleteTimerEndsAt = 0;
 
   function clamp(n, min, max, fallback) {
     n = Number(n);
@@ -49,6 +55,7 @@
     s.autoScrollMaxRuns = clamp(s.autoScrollMaxRuns, 1, 200, 20);
     s.autoScrollStepWaitMs = clamp(s.autoScrollStepWaitMs, 1000, 300000, 2000);
     s.autoScrollRecentThreshold = clamp(s.autoScrollRecentThreshold, 1, 1000, 100);
+    s.deleteTimerDurationMs = clamp(s.deleteTimerDurationMs, 60000, 86400000, 300000);
     return s;
   }
 
@@ -69,6 +76,12 @@
     }
   }
 
+  function formatMs(ms) {
+    const sec = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
 
   function showToast(message, kind = "info", ms = 1500) {
     let el = document.getElementById(IDS.toast);
@@ -140,7 +153,7 @@
     style.id = IDS.style;
     style.textContent = `
       #${IDS.slot}{display:flex;gap:8px;align-items:center;margin-right:8px;flex:0 0 auto}
-      #${IDS.count}{padding:0 10px;height:36px;display:flex;align-items:center;background:#111827;color:#fff;border-radius:8px;font-size:12px;font-weight:700}
+      #${IDS.count},#${IDS.timer}{padding:0 10px;height:36px;display:flex;align-items:center;background:#111827;color:#fff;border-radius:8px;font-size:12px;font-weight:700}
       #${IDS.del}{height:36px;padding:0 12px;background:#e11d48;color:#fff;border:none;border-radius:8px;cursor:pointer}
       #${IDS.del}:disabled{opacity:.72;cursor:wait}
       #${IDS.settings},#${IDS.random}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
@@ -153,16 +166,148 @@
     return document.querySelector("form") || document.querySelector("textarea")?.parentElement || null;
   }
 
+  function getRecentSectionContainers() {
+    const labels = ["recent", "recents", "最近"];
+    const nodes = [...document.querySelectorAll('nav section, nav div, nav [role="group"], nav li')];
+    return nodes.filter((node) => {
+      const text = (node.textContent || "").toLowerCase();
+      return labels.some((label) => text.includes(label));
+    });
+  }
+
   function getRecentLinks() {
+    const containers = getRecentSectionContainers();
+    if (containers.length) {
+      const links = containers.flatMap((node) => [...node.querySelectorAll('a[href*="/c/"]')]);
+      if (links.length) return links;
+    }
     return [...document.querySelectorAll('nav a[href*="/c/"]')];
   }
 
+  const projectConversationCache = new Map();
+  const projectConversationInFlight = new Set();
+
+  function isProjectConversationLink(link) {
+    if (!link) return false;
+
+    const href = (link.getAttribute("href") || link.href || "").toLowerCase();
+    if (href.includes("/project/") || href.includes("/projects/")) return true;
+
+    const projectContainer = link.closest(
+      '[data-testid*="project" i], [class*="project" i], [id*="project" i], [aria-label*="project" i], [aria-label*="プロジェクト" i]'
+    );
+    return !!projectContainer;
+  }
+
+
+
+  function getConversationIdFromHref(href) {
+    const path = hrefPath(href || "");
+    const m = path.match(/\/c\/([^/?#]+)/);
+    return m ? m[1] : null;
+  }
+
+  async function isProjectConversationId(conversationId) {
+    if (!conversationId) return false;
+    if (projectConversationCache.has(conversationId)) return projectConversationCache.get(conversationId);
+    if (projectConversationInFlight.has(conversationId)) return false;
+
+    projectConversationInFlight.add(conversationId);
+    try {
+      const token = await getToken();
+      const res = await fetch(`/backend-api/conversation/${conversationId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("conversation fetch failed");
+      const data = await res.json();
+      const isProject = !!(
+        data?.project_id ||
+        data?.projectId ||
+        data?.workspace_id ||
+        data?.workspaceId ||
+        data?.conversation?.project_id ||
+        data?.conversation?.projectId
+      );
+      projectConversationCache.set(conversationId, isProject);
+      return isProject;
+    } catch {
+      projectConversationCache.set(conversationId, false);
+      return false;
+    } finally {
+      projectConversationInFlight.delete(conversationId);
+    }
+  }
+
+  function refreshProjectConversationFlags() {
+    for (const link of getRecentLinks()) {
+      const id = getConversationIdFromHref(link.href || link.getAttribute("href"));
+      if (!id || projectConversationCache.has(id) || projectConversationInFlight.has(id)) continue;
+      isProjectConversationId(id).then(() => {
+        hideProjectRecentItems();
+        refreshRecentCountUI();
+      });
+    }
+  }
+
+
+  // Backward-compatible shim for older call sites.
+  function getProjectConversationPaths() {
+    return new Set();
+  }
+
+
+  function getNonRecentConversationPaths() {
+    const recentLinks = new Set(getRecentLinks());
+    const paths = new Set();
+    for (const link of document.querySelectorAll('nav a[href*="/c/"]')) {
+      if (recentLinks.has(link)) continue;
+      const path = hrefPath(link.href || link.getAttribute("href"));
+      if (path) paths.add(path);
+    }
+    return paths;
+  }
+
+  function hideProjectRecentItems() {
+    const nonRecentPaths = getNonRecentConversationPaths();
+    for (const link of getRecentLinks()) {
+      const row =
+        link.closest('li, [role="listitem"], [data-testid*="conversation" i], [data-testid*="thread" i]');
+      if (!row) continue;
+
+      const href = link.href || link.getAttribute("href");
+      const id = getConversationIdFromHref(href);
+      const path = hrefPath(href || "");
+      const shouldHide =
+        isProjectConversationLink(link) ||
+        (id && projectConversationCache.get(id) === true) ||
+        (path && nonRecentPaths.has(path));
+      if (shouldHide) {
+        row.style.display = "none";
+        row.setAttribute("data-cgpt-hidden-project", "1");
+      } else if (row.getAttribute("data-cgpt-hidden-project") === "1") {
+        row.style.display = "";
+        row.removeAttribute("data-cgpt-hidden-project");
+      }
+    }
+  }
+
   function getRecentCount() {
-    return getRecentLinks().length;
+    const nonRecentPaths = getNonRecentConversationPaths();
+    return getRecentLinks().filter((link) => {
+      const href = link.href || link.getAttribute("href");
+      const id = getConversationIdFromHref(href);
+      const path = hrefPath(href || "");
+      return (
+        !isProjectConversationLink(link) &&
+        !(id && projectConversationCache.get(id) === true) &&
+        !(path && nonRecentPaths.has(path))
+      );
+    }).length;
   }
 
   function getConversationLinks() {
-    return [...document.querySelectorAll('a[href*="/c/"]')];
+    return [...document.querySelectorAll('a[href*="/c/"]')]
+      .filter((link) => !isProjectConversationLink(link));
   }
 
   function getNeighborLink(offset) {
@@ -235,12 +380,61 @@
     return null;
   }
 
+  function updateTimerUI() {
+    const el = document.getElementById(IDS.timer);
+    if (!el || !settings.enableDeleteTimerDisplay) return;
+    const remaining = deleteTimerEndsAt - Date.now();
+    el.textContent = "削除タイマー: " + formatMs(remaining);
+  }
+
+  function isDeleteTimerRunning() {
+    return settings.enableDeleteTimerDisplay && deleteTimerEndsAt > Date.now();
+  }
 
   function shouldShowDeleteButton() {
     if (!settings.enableDeleteButton) return false;
-    return true;
+    if (!settings.enableDeleteTimerDisplay) return true;
+    return !isDeleteTimerRunning();
   }
 
+  function startDeleteTimer() {
+    deleteTimerEndsAt = Date.now() + settings.deleteTimerDurationMs;
+    try {
+      localStorage.setItem(STORAGE_KEYS.deleteTimerEndsAt, String(deleteTimerEndsAt));
+    } catch {}
+    updateTimerUI();
+    rerender();
+    if (deleteTimerTicker) clearInterval(deleteTimerTicker);
+    deleteTimerTicker = setInterval(() => {
+      updateTimerUI();
+      if (Date.now() >= deleteTimerEndsAt) {
+        clearInterval(deleteTimerTicker);
+        deleteTimerTicker = null;
+        rerender();
+      }
+    }, 1000);
+  }
+
+  function restoreDeleteTimer() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.deleteTimerEndsAt);
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > Date.now()) {
+        deleteTimerEndsAt = n;
+        rerender();
+        if (deleteTimerTicker) clearInterval(deleteTimerTicker);
+        deleteTimerTicker = setInterval(() => {
+          updateTimerUI();
+          if (Date.now() >= deleteTimerEndsAt) {
+            clearInterval(deleteTimerTicker);
+            deleteTimerTicker = null;
+            showToast("削除タイマー終了");
+            rerender();
+          }
+        }, 1000);
+      }
+    } catch {}
+  }
 
   function ensureSettingsButton(anchor) {
     let btn = document.getElementById(IDS.settings);
@@ -295,6 +489,8 @@
 
   function rerender() {
     injectStyle();
+    hideProjectRecentItems();
+    refreshProjectConversationFlags();
     if (!isConversation()) {
       removeInlineUI();
       return;
@@ -306,7 +502,7 @@
     ensureSettingsButton(anchor);
     ensureRandomButton(anchor);
 
-    const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton();
+    const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton() || settings.enableDeleteTimerDisplay;
     let slot = document.getElementById(IDS.slot);
 
     if (!anyInlineEnabled) {
@@ -325,6 +521,8 @@
     const delEl = document.getElementById(IDS.del);
     if (delEl && !settings.enableDeleteButton) delEl.remove();
 
+    const timerEl = document.getElementById(IDS.timer);
+    if (timerEl && !settings.enableDeleteTimerDisplay) timerEl.remove();
 
     if (settings.enableRecentCount) {
       let count = document.getElementById(IDS.count);
@@ -334,6 +532,16 @@
         slot.appendChild(count);
       }
       count.textContent = "最近: " + getRecentCount();
+    }
+
+    if (settings.enableDeleteTimerDisplay) {
+      let timer = document.getElementById(IDS.timer);
+      if (!timer) {
+        timer = document.createElement("div");
+        timer.id = IDS.timer;
+        slot.appendChild(timer);
+      }
+      updateTimerUI();
     }
 
     if (!shouldShowDeleteButton()) {
@@ -446,6 +654,7 @@
       });
       if (!res.ok) throw new Error("delete failed");
 
+      if (settings.enableDeleteTimerDisplay) startDeleteTimer();
 
       const randomLink = getRandomConversationLink();
       if (!randomLink) {
@@ -487,12 +696,14 @@
       const settingsBtn = document.getElementById(IDS.settings);
       const slot = document.getElementById(IDS.slot);
       const randomBtn = document.getElementById(IDS.random);
-      const inlineNeeded = settings.enableRecentCount || shouldShowDeleteButton();
+      const inlineNeeded = settings.enableRecentCount || shouldShowDeleteButton() || settings.enableDeleteTimerDisplay;
       const needsRepair =
         (anchor && settingsBtn && settingsBtn.parentElement !== anchor) ||
         (anchor && !settingsBtn) ||
         (settings.enableRandomThreadButton && anchor && (!randomBtn || randomBtn.parentElement !== anchor)) ||
         (inlineNeeded && anchor && (!slot || slot.parentElement !== anchor));
+      hideProjectRecentItems();
+    refreshProjectConversationFlags();
       if (needsRepair) rerender();
       if (settings.enableAutoScrollRecent) autoScrollRecentIfNeeded();
       healTimer = setTimeout(tick, 1500);
@@ -574,6 +785,7 @@
   async function boot() {
     await loadSettings();
     loadNextAutoScrollAt();
+    restoreDeleteTimer();
     injectStyle();
     installKeyboard();
     hookHistory();
