@@ -5,7 +5,13 @@
     enableDeleteShortcut: false,
     enableNavShortcuts: false,
     enableRandomThreadButton: false,
+    enableThreadNavButtons: false,
     enableAutoScrollRecent: false,
+    afterDeleteMoveMode: "random",
+    shortcutDelete: "Ctrl+Shift+Backspace",
+    shortcutNavDown: "Alt+J",
+    shortcutNavUp: "Alt+K",
+    shortcutRandom: "Alt+R",
     autoScrollIntervalMs: 60000,
     autoScrollMaxRuns: 20,
     autoScrollStepWaitMs: 2000,
@@ -18,6 +24,8 @@
     del: "cgpt-delete",
     settings: "cgpt-open-settings",
     random: "cgpt-random-thread",
+    navPrev: "cgpt-nav-prev",
+    navNext: "cgpt-nav-next",
     style: "cgpt-inline-style",
     toast: "cgpt-inline-toast",
   };
@@ -143,8 +151,9 @@
       #${IDS.count}{padding:0 10px;height:36px;display:flex;align-items:center;background:#111827;color:#fff;border-radius:8px;font-size:12px;font-weight:700}
       #${IDS.del}{height:36px;padding:0 12px;background:#e11d48;color:#fff;border:none;border-radius:8px;cursor:pointer}
       #${IDS.del}:disabled{opacity:.72;cursor:wait}
-      #${IDS.settings},#${IDS.random}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
+      #${IDS.settings},#${IDS.random},#${IDS.navPrev},#${IDS.navNext}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
       #${IDS.random}{background:#0f766e}
+      #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
     `;
     document.documentElement.appendChild(style);
   }
@@ -287,10 +296,50 @@
     if (btn.parentElement !== anchor) anchor.appendChild(btn);
   }
 
+  function ensureNavButtons(anchor) {
+    const prevId = IDS.navPrev;
+    const nextId = IDS.navNext;
+    if (!settings.enableThreadNavButtons) {
+      document.getElementById(prevId)?.remove();
+      document.getElementById(nextId)?.remove();
+      return;
+    }
+    let prev = document.getElementById(prevId);
+    if (!prev) {
+      prev = document.createElement("button");
+      prev.id = prevId;
+      prev.type = "button";
+      prev.textContent = "↑";
+      prev.title = "上のスレッドへ";
+      prev.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigate(-1);
+      });
+    }
+    let next = document.getElementById(nextId);
+    if (!next) {
+      next = document.createElement("button");
+      next.id = nextId;
+      next.type = "button";
+      next.textContent = "↓";
+      next.title = "下のスレッドへ";
+      next.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigate(1);
+      });
+    }
+    if (prev.parentElement !== anchor) anchor.prepend(prev);
+    if (next.parentElement !== anchor) anchor.prepend(next);
+  }
+
   function removeInlineUI() {
     document.getElementById(IDS.slot)?.remove();
     document.getElementById(IDS.settings)?.remove();
     document.getElementById(IDS.random)?.remove();
+    document.getElementById(IDS.navPrev)?.remove();
+    document.getElementById(IDS.navNext)?.remove();
   }
 
   function rerender() {
@@ -305,6 +354,7 @@
 
     ensureSettingsButton(anchor);
     ensureRandomButton(anchor);
+    ensureNavButtons(anchor);
 
     const anyInlineEnabled = settings.enableRecentCount || shouldShowDeleteButton();
     let slot = document.getElementById(IDS.slot);
@@ -447,12 +497,18 @@
       if (!res.ok) throw new Error("delete failed");
 
 
-      const randomLink = getRandomConversationLink();
-      if (!randomLink) {
-        showToast("削除しました");
+      if (settings.afterDeleteMoveMode === "up") {
+        showToast("削除しました。上へ移動します");
+        if (!moveToConversation(getNeighborLink(-1))) showToast("削除しました");
         return;
       }
-
+      if (settings.afterDeleteMoveMode === "down") {
+        showToast("削除しました。下へ移動します");
+        if (!moveToConversation(getNeighborLink(1))) showToast("削除しました");
+        return;
+      }
+      const randomLink = getRandomConversationLink();
+      if (!randomLink) return showToast("削除しました");
       showToast("削除しました。ランダムなスレッドへ移動します");
       moveToConversation(randomLink);
     } catch (e) {
@@ -501,24 +557,41 @@
   }
 
   function installKeyboard() {
+    const normalizeShortcut = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, "");
+    const matchesShortcut = (e, shortcut) => {
+      const raw = normalizeShortcut(shortcut);
+      if (!raw) return false;
+      const parts = raw.split("+").filter(Boolean);
+      const needCtrl = parts.includes("ctrl") || parts.includes("control");
+      const needMeta = parts.includes("cmd") || parts.includes("meta");
+      const needAlt = parts.includes("alt") || parts.includes("option");
+      const needShift = parts.includes("shift");
+      const key = parts[parts.length - 1];
+      if (!key) return false;
+      if (!!e.ctrlKey !== needCtrl) return false;
+      if (!!e.metaKey !== needMeta) return false;
+      if (!!e.altKey !== needAlt) return false;
+      if (!!e.shiftKey !== needShift) return false;
+      const eKey = (e.key || "").toLowerCase();
+      return eKey === key.toLowerCase();
+    };
     document.addEventListener("keydown", (e) => {
-      const key = (e.key || "").toLowerCase();
-      if (settings.enableNavShortcuts && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && key === "j") {
+      if (settings.enableNavShortcuts && matchesShortcut(e, settings.shortcutNavDown)) {
         e.preventDefault();
         navigate(1);
         return;
       }
-      if (settings.enableNavShortcuts && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && key === "k") {
+      if (settings.enableNavShortcuts && matchesShortcut(e, settings.shortcutNavUp)) {
         e.preventDefault();
         navigate(-1);
         return;
       }
-      if (settings.enableNavShortcuts && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && key === "r") {
+      if (settings.enableNavShortcuts && matchesShortcut(e, settings.shortcutRandom)) {
         e.preventDefault();
         moveToRandomConversation();
         return;
       }
-      if (settings.enableDeleteShortcut && (e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "Backspace") {
+      if (settings.enableDeleteShortcut && matchesShortcut(e, settings.shortcutDelete)) {
         e.preventDefault();
         deleteCurrentThread();
       }
