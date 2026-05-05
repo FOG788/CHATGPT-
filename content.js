@@ -171,9 +171,21 @@
     document.documentElement.appendChild(style);
   }
 
+  function findComposerInput() {
+    return document.querySelector('form textarea, textarea, form [contenteditable="true"][data-placeholder], [contenteditable="true"][data-placeholder]');
+  }
+
   function findAnchor() {
-    const textarea = document.querySelector("form textarea, textarea");
-    return textarea?.parentElement || document.querySelector("form") || null;
+    const input = findComposerInput();
+    if (!input) return document.querySelector("form") || null;
+    let node = input.parentElement;
+    while (node && node.tagName !== "FORM") {
+      if (node.querySelector('button[data-testid*="send"], button[aria-label*="Send"], button[aria-label*="送信"]')) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return input.parentElement || document.querySelector("form") || null;
   }
 
   function getRecentLinks() {
@@ -357,15 +369,28 @@
   }
 
   function applySnippet(text) {
-    const textarea = document.querySelector("form textarea, textarea");
-    if (!textarea) return;
-    const start = textarea.selectionStart ?? textarea.value.length;
-    const end = textarea.selectionEnd ?? textarea.value.length;
-    textarea.value = `${textarea.value.slice(0, start)}${text}${textarea.value.slice(end)}`;
-    const caret = start + text.length;
-    textarea.setSelectionRange(caret, caret);
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    textarea.focus();
+    const input = findComposerInput();
+    if (!input) return;
+
+    if (input.tagName === "TEXTAREA") {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+      const start = input.selectionStart ?? input.value.length;
+      const end = input.selectionEnd ?? input.value.length;
+      const next = `${input.value.slice(0, start)}${text}${input.value.slice(end)}`;
+      if (setter) setter.call(input, next);
+      else input.value = next;
+      const caret = start + text.length;
+      input.setSelectionRange(caret, caret);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus();
+      return;
+    }
+
+    if (input.isContentEditable) {
+      input.focus();
+      document.execCommand("insertText", false, text);
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, data: text, inputType: "insertText" }));
+    }
   }
 
   function ensureSnippetButtons(anchor) {
