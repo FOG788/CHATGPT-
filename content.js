@@ -233,11 +233,13 @@
     if (!nextPath || nextPath === currentPath) return false;
     try {
       target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+      pendingScrollTopAfterMove = true;
       setTimeout(() => {
         if (location.pathname === currentPath) location.href = href;
       }, 220);
       return true;
     } catch {
+      pendingScrollTopAfterMove = true;
       location.href = href;
       return true;
     }
