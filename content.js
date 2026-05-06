@@ -51,8 +51,6 @@
     s.railBottomPx = clamp(s.railBottomPx, 0, 1200, 150);
     s.mainTextMaxWidthPx = clamp(s.mainTextMaxWidthPx, 480, 2000, 760);
     s.snippetButtonWidthPx = clamp(s.snippetButtonWidthPx, 56, 320, 88);
-    s.moveScrollTopThresholdPx = clamp(s.moveScrollTopThresholdPx, 800, 40000, 3000);
-    s.moveScrollTopDelayMs = clamp(s.moveScrollTopDelayMs, 0, 10000, 1200);
     return s;
   }
 
@@ -369,12 +367,24 @@
   }
 
 
-  function scrollAllToTopNow() {
-    const nodes = document.querySelectorAll("*");
-    for (const el of nodes) {
+  function scrollMainToTopNow() {
+    const main = document.querySelector("main");
+    if (main) {
       try {
-        if (el.scrollTop > 0) el.scrollTop = 0;
+        main.scrollTop = 0;
       } catch {}
+      let node = main.parentElement;
+      for (let i = 0; i < 6 && node; i++) {
+        try {
+          const style = getComputedStyle(node);
+          const canScroll = /(auto|scroll)/.test(style.overflowY) || /(auto|scroll)/.test(style.overflow);
+          if (canScroll && node.scrollHeight > node.clientHeight + 20) {
+            node.scrollTop = 0;
+            break;
+          }
+        } catch {}
+        node = node.parentElement;
+      }
     }
     window.scrollTo({ top: 0, behavior: "auto" });
   }
@@ -390,7 +400,7 @@
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        scrollAllToTopNow();
+        scrollMainToTopNow();
       });
     }
     if (btn.parentElement !== anchor) anchor.appendChild(btn);
