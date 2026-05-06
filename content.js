@@ -685,62 +685,16 @@
   }
 
 
-  function bruteForceScrollAllToTop() {
-    const nodes = document.querySelectorAll("*");
-    for (const el of nodes) {
-      try {
-        if (el.scrollTop > 0) el.scrollTop = 0;
-      } catch {}
-    }
-    window.scrollTo({ top: 0, behavior: "auto" });
-  }
-
-  function shouldScrollToTopOnMove() {
-    return true;
-  }
-
-  function waitForMainReady(expectedPath, token, timeoutMs = 4000) {
-    return new Promise((resolve) => {
-      const start = Date.now();
-      let lastHeight = -1;
-      let stableCount = 0;
-
-      const tick = () => {
-        if (token !== navigationScrollToken) return resolve(false);
-        if (location.pathname !== expectedPath) return resolve(false);
-
-        const target = findMainScrollable();
-        const h = target?.scrollHeight || document.documentElement?.scrollHeight || 0;
-        if (h === lastHeight) stableCount += 1;
-        else stableCount = 0;
-        lastHeight = h;
-
-        if (stableCount >= 2) return resolve(true);
-        if (Date.now() - start >= timeoutMs) return resolve(true);
-        requestAnimationFrame(tick);
-      };
-
-      requestAnimationFrame(tick);
-    });
-  }
-
   function scrollMainToTopIfNeeded(expectedPath, token) {
-    const baseDelay = settings.moveScrollTopDelayMs;
-    const attempts = [baseDelay, baseDelay + 600, baseDelay + 1600];
-    for (const delay of attempts) {
-      setTimeout(async () => {
-        if (token !== navigationScrollToken) return;
-        if (location.pathname !== expectedPath) return;
-        if (!isConversation()) return;
-        await waitForMainReady(expectedPath, token);
-        if (token !== navigationScrollToken) return;
-        if (location.pathname !== expectedPath) return;
-        const target = findMainScrollable();
-        if (!shouldScrollToTopOnMove(target)) return;
-        scrollElementToTop(target);
-        bruteForceScrollAllToTop();
-      }, delay);
-    }
+    const delay = settings.moveScrollTopDelayMs;
+    setTimeout(() => {
+      if (token !== navigationScrollToken) return;
+      if (location.pathname !== expectedPath) return;
+      if (!isConversation()) return;
+      const target = findMainScrollable();
+      scrollElementToTop(target);
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }, delay);
   }
 
   function startHealingLoop() {
