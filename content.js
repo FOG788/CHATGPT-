@@ -32,6 +32,7 @@
   let recentRefreshTimer = null;
   let recentCountDeferredTimer = null;
   let lastFocusedComposer = null;
+  let pendingScrollTopAfterMove = false;
 
   function clamp(n, min, max, fallback) {
     n = Number(n);
@@ -232,11 +233,13 @@
     if (!nextPath || nextPath === currentPath) return false;
     try {
       target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+      pendingScrollTopAfterMove = true;
       setTimeout(() => {
         if (location.pathname === currentPath) location.href = href;
       }, 220);
       return true;
     } catch {
+      pendingScrollTopAfterMove = true;
       location.href = href;
       return true;
     }
