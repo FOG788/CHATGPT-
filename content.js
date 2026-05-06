@@ -44,7 +44,6 @@
   function normalizeSettings(raw) {
     const s = { ...DEFAULTS, ...raw };
     s.autoScrollIntervalMs = clamp(s.autoScrollIntervalMs, 60000, 1800000, 60000);
-    s.autoScrollMaxRuns = clamp(s.autoScrollMaxRuns, 1, 200, 20);
     s.autoScrollStepWaitMs = clamp(s.autoScrollStepWaitMs, 1000, 300000, 2000);
     s.autoScrollRecentThreshold = clamp(s.autoScrollRecentThreshold, 1, 1000, 100);
     s.railLeftPx = clamp(s.railLeftPx, 0, 1600, 340);
@@ -406,6 +405,18 @@
     if (btn.parentElement !== anchor) anchor.appendChild(btn);
   }
 
+  function clearMainWidthStyle() {
+    document.getElementById(IDS.widthStyle)?.remove();
+  }
+
+  function applyMainWidthStyle() {
+    clearMainWidthStyle();
+    const style = document.createElement("style");
+    style.id = IDS.widthStyle;
+    style.textContent = `main .prose, main [class*="prose"]{max-width:${settings.mainTextMaxWidthPx}px !important;}`;
+    document.documentElement.appendChild(style);
+  }
+
   function ensureRail(anchor) {
     let rail = document.getElementById(IDS.rail);
     if (!rail) {
@@ -420,9 +431,6 @@
     return rail;
   }
 
-  function clearMainWidthStyle() {
-    document.getElementById(IDS.widthStyle)?.remove();
-  }
 
   function applySnippet(text) {
     const formInput = document.querySelector('form textarea, form [contenteditable="true"], form [contenteditable="true"][role="textbox"]');
@@ -501,7 +509,7 @@
     const anchor = findAnchor();
     if (!anchor) return;
     const rail = ensureRail(anchor);
-    clearMainWidthStyle();
+    applyMainWidthStyle();
 
     ensureSettingsButton(rail);
     ensureRandomButton(rail);

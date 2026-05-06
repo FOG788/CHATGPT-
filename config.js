@@ -13,7 +13,6 @@
     shortcutNavUp: "Alt+K",
     shortcutRandom: "Alt+R",
     autoScrollIntervalMs: 60000,
-    autoScrollMaxRuns: 20,
     autoScrollStepWaitMs: 2000,
     autoScrollRecentThreshold: 100,
     railLeftPx: 340,
@@ -39,7 +38,6 @@
 
   const NUMERIC_SETTING_KEYS = [
     "autoScrollIntervalMs",
-    "autoScrollMaxRuns",
     "autoScrollStepWaitMs",
     "autoScrollRecentThreshold",
     "railLeftPx",

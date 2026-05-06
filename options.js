@@ -15,14 +15,6 @@ const NUMERIC_INPUT_DEFS = [
     write: (value) => value * 60000,
   },
   {
-    id: "autoScrollMaxRuns",
-    payloadKey: "autoScrollMaxRuns",
-    min: 1,
-    max: 200,
-    fallback: 20,
-    read: (data) => data.autoScrollMaxRuns || 20,
-  },
-  {
     id: "autoScrollStepWaitSec",
     payloadKey: "autoScrollStepWaitMs",
     min: 1,
@@ -65,11 +57,9 @@ function clamp(value, min, max, fallback) {
   return Math.max(min, Math.min(max, Math.round(parsed)));
 }
 
-function getCheckboxSettingKeys() {
-  return Object.keys(DEFAULTS).filter(
-    (key) => !NUMERIC_SETTING_KEYS.includes(key) && !TEXT_SETTING_KEYS.includes(key),
-  );
-}
+const CHECKBOX_SETTING_KEYS = Object.keys(DEFAULTS).filter(
+  (key) => !NUMERIC_SETTING_KEYS.includes(key) && !TEXT_SETTING_KEYS.includes(key),
+);
 
 function setStatus(message) {
   const status = document.getElementById("status");
@@ -80,7 +70,7 @@ function setStatus(message) {
 }
 
 function loadCheckboxes(data) {
-  for (const key of getCheckboxSettingKeys()) {
+  for (const key of CHECKBOX_SETTING_KEYS) {
     document.getElementById(key).checked = !!data[key];
   }
 }
@@ -108,7 +98,7 @@ async function load() {
 function buildPayload() {
   const payload = {};
 
-  for (const key of getCheckboxSettingKeys()) {
+  for (const key of CHECKBOX_SETTING_KEYS) {
     payload[key] = document.getElementById(key).checked;
   }
 
@@ -139,7 +129,7 @@ async function disableAll() {
 
 async function enableAll() {
   const payload = { ...DEFAULTS };
-  for (const key of getCheckboxSettingKeys()) payload[key] = true;
+  for (const key of CHECKBOX_SETTING_KEYS) payload[key] = true;
   await chrome.storage.sync.set(payload);
   await load();
   setStatus("全部オンにしました");
