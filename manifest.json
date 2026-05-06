@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ChatGPT Thread Deleter Ultra Light",
   "version": "4.7.7",
-  "description": "Fixes auto-scroll interval timing to respect saved settings.",
+  "description": "ChatGPTの会話削除・移動・定型文入力を支援する軽量拡張。",
   "permissions": [
     "activeTab",
     "storage"
