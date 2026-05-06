@@ -683,6 +683,17 @@
     }
   }
 
+
+  function bruteForceScrollAllToTop() {
+    const nodes = document.querySelectorAll("*");
+    for (const el of nodes) {
+      try {
+        if (el.scrollTop > 0) el.scrollTop = 0;
+      } catch {}
+    }
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
   function shouldScrollToTopOnMove() {
     return true;
   }
@@ -696,7 +707,7 @@
         if (!shouldScrollToTopOnMove(target)) return;
         requestAnimationFrame(() => {
           scrollElementToTop(target);
-          window.scrollTo({ top: 0, behavior: "auto" });
+          bruteForceScrollAllToTop();
         });
       }, delay);
     }
