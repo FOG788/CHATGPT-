@@ -683,15 +683,6 @@
   }
 
 
-  function shouldScrollToTopOnMove(target) {
-    const height = Math.max(
-      target?.scrollHeight || 0,
-      document.documentElement?.scrollHeight || 0,
-      document.body?.scrollHeight || 0,
-    );
-    return height >= settings.moveScrollTopThresholdPx;
-  }
-
   function scrollMainToTopIfNeeded(expectedPath, token) {
     const delay = settings.moveScrollTopDelayMs;
     setTimeout(() => {
@@ -699,7 +690,6 @@
       if (location.pathname !== expectedPath) return;
       if (!isConversation()) return;
       const target = findMainScrollable();
-      if (!shouldScrollToTopOnMove(target)) return;
       scrollElementToTop(target);
       window.scrollTo({ top: 0, behavior: "auto" });
     }, delay);
