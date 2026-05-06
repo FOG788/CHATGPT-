@@ -21,6 +21,7 @@
     mainTextMaxWidthPx: 760,
     snippetButtonWidthPx: 88,
     moveScrollTopThresholdPx: 3000,
+    moveScrollTopDelayMs: 1200,
     snippet1Text: "お疲れさまです。要点だけ3つでお願いします。",
     snippet1Label: "定型1",
     snippet1Shortcut: "Alt+1",
@@ -48,6 +49,7 @@
     "mainTextMaxWidthPx",
     "snippetButtonWidthPx",
     "moveScrollTopThresholdPx",
+    "moveScrollTopDelayMs",
   ];
 
   const TEXT_SETTING_KEYS = [

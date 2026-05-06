@@ -46,6 +46,7 @@ function loadNumericInputs(data) {
   document.getElementById("mainTextMaxWidthPx").value = String(data.mainTextMaxWidthPx || 760);
   document.getElementById("snippetButtonWidthPx").value = String(data.snippetButtonWidthPx || 88);
   document.getElementById("moveScrollTopThresholdPx").value = String(data.moveScrollTopThresholdPx || 3000);
+  document.getElementById("moveScrollTopDelaySec").value = String((data.moveScrollTopDelayMs || 1200) / 1000);
 }
 
 function loadTextInputs(data) {
@@ -99,6 +100,12 @@ function buildPayload() {
     800,
     40000,
     3000,
+  );
+  payload.moveScrollTopDelayMs = clamp(
+    Number(document.getElementById("moveScrollTopDelaySec").value) * 1000,
+    0,
+    10000,
+    1200,
   );
   for (const key of TEXT_SETTING_KEYS) {
     const el = document.getElementById(key);

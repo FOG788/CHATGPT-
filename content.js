@@ -51,6 +51,7 @@
     s.mainTextMaxWidthPx = clamp(s.mainTextMaxWidthPx, 480, 2000, 760);
     s.snippetButtonWidthPx = clamp(s.snippetButtonWidthPx, 56, 320, 88);
     s.moveScrollTopThresholdPx = clamp(s.moveScrollTopThresholdPx, 800, 40000, 3000);
+    s.moveScrollTopDelayMs = clamp(s.moveScrollTopDelayMs, 0, 10000, 1200);
     return s;
   }
 
@@ -698,21 +699,46 @@
     return true;
   }
 
+  function waitForMainReady(expectedPath, token, timeoutMs = 4000) {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      let lastHeight = -1;
+      let stableCount = 0;
+
+      const tick = () => {
+        if (token !== navigationScrollToken) return resolve(false);
+        if (location.pathname !== expectedPath) return resolve(false);
+
+        const target = findMainScrollable();
+        const h = target?.scrollHeight || document.documentElement?.scrollHeight || 0;
+        if (h === lastHeight) stableCount += 1;
+        else stableCount = 0;
+        lastHeight = h;
+
+        if (stableCount >= 2) return resolve(true);
+        if (Date.now() - start >= timeoutMs) return resolve(true);
+        requestAnimationFrame(tick);
+      };
+
+      requestAnimationFrame(tick);
+    });
+  }
+
   function scrollMainToTopIfNeeded(expectedPath, token) {
-    const attempts = [250, 700, 1400];
+    const baseDelay = settings.moveScrollTopDelayMs;
+    const attempts = [baseDelay, baseDelay + 600, baseDelay + 1600];
     for (const delay of attempts) {
-      setTimeout(() => {
+      setTimeout(async () => {
         if (token !== navigationScrollToken) return;
         if (location.pathname !== expectedPath) return;
         if (!isConversation()) return;
+        await waitForMainReady(expectedPath, token);
+        if (token !== navigationScrollToken) return;
+        if (location.pathname !== expectedPath) return;
         const target = findMainScrollable();
         if (!shouldScrollToTopOnMove(target)) return;
-        requestAnimationFrame(() => {
-          if (token !== navigationScrollToken) return;
-          if (location.pathname !== expectedPath) return;
-          scrollElementToTop(target);
-          bruteForceScrollAllToTop();
-        });
+        scrollElementToTop(target);
+        bruteForceScrollAllToTop();
       }, delay);
     }
   }
