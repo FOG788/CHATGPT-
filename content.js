@@ -32,6 +32,7 @@
   let recentRefreshTimer = null;
   let recentCountDeferredTimer = null;
   let lastFocusedComposer = null;
+  let pendingScrollTopAfterMove = false;
 
   function clamp(n, min, max, fallback) {
     n = Number(n);
@@ -49,6 +50,7 @@
     s.railBottomPx = clamp(s.railBottomPx, 0, 1200, 150);
     s.mainTextMaxWidthPx = clamp(s.mainTextMaxWidthPx, 480, 2000, 760);
     s.snippetButtonWidthPx = clamp(s.snippetButtonWidthPx, 56, 320, 88);
+    s.moveScrollTopThresholdPx = clamp(s.moveScrollTopThresholdPx, 800, 40000, 3000);
     return s;
   }
 
@@ -231,11 +233,13 @@
     if (!nextPath || nextPath === currentPath) return false;
     try {
       target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+      pendingScrollTopAfterMove = true;
       setTimeout(() => {
         if (location.pathname === currentPath) location.href = href;
       }, 220);
       return true;
     } catch {
+      pendingScrollTopAfterMove = true;
       location.href = href;
       return true;
     }
@@ -664,6 +668,29 @@
     moveToConversation(link);
   }
 
+
+  function shouldScrollToTopOnMove() {
+    const height = Math.max(
+      document.documentElement?.scrollHeight || 0,
+      document.body?.scrollHeight || 0,
+    );
+    return height >= settings.moveScrollTopThresholdPx;
+  }
+
+  function scrollMainToTopIfNeeded() {
+    if (!pendingScrollTopAfterMove) return;
+    pendingScrollTopAfterMove = false;
+
+    const attempts = [250, 700, 1400];
+    for (const delay of attempts) {
+      setTimeout(() => {
+        if (!isConversation()) return;
+        if (!shouldScrollToTopOnMove()) return;
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }, delay);
+    }
+  }
+
   function startHealingLoop() {
     if (healTimer) clearTimeout(healTimer);
     const tick = () => {
@@ -729,6 +756,7 @@
       setTimeout(rerender, 250);
       setTimeout(rerender, 900);
       setTimeout(rerender, 1600);
+      scrollMainToTopIfNeeded();
     }
   }
 
