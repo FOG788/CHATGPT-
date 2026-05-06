@@ -281,11 +281,19 @@
       btn.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const extUrl = chrome.runtime.getURL("options.html");
-        try {
-          const resp = await chrome.runtime.sendMessage({ type: "OPEN_OPTIONS_PAGE" });
-          if (resp && resp.ok) return;
-        } catch {}
+        const runtime = globalThis.chrome?.runtime;
+        if (!runtime?.id || typeof runtime.getURL !== "function") return;
+
+        const extUrl = runtime.getURL("options.html");
+        if (!extUrl) return;
+
+        if (typeof runtime.sendMessage === "function") {
+          try {
+            const resp = await runtime.sendMessage({ type: "OPEN_OPTIONS_PAGE" });
+            if (resp && resp.ok) return;
+          } catch {}
+        }
+
         try {
           window.open(extUrl, "_blank", "noopener,noreferrer");
         } catch {
