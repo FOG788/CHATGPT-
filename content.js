@@ -49,6 +49,7 @@
     s.railBottomPx = clamp(s.railBottomPx, 0, 1200, 150);
     s.mainTextMaxWidthPx = clamp(s.mainTextMaxWidthPx, 480, 2000, 760);
     s.snippetButtonWidthPx = clamp(s.snippetButtonWidthPx, 56, 320, 88);
+    s.moveScrollTopThresholdPx = clamp(s.moveScrollTopThresholdPx, 800, 40000, 3000);
     return s;
   }
 
@@ -374,30 +375,8 @@
     return rail;
   }
 
-  function applyMainWidthStyle() {
-    let style = document.getElementById(IDS.widthStyle);
-    if (!style) {
-      style = document.createElement("style");
-      style.id = IDS.widthStyle;
-      document.documentElement.appendChild(style);
-    }
-    style.textContent = `
-      main article,
-      main [class*="prose"],
-      main .markdown,
-      main .whitespace-pre-wrap,
-      main [class*="max-w-"] {
-        max-width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
-      }
-      main [class*="mx-auto"] {
-        width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
-      }
-      main form,
-      main form > div,
-      main form [class*="max-w-"] {
-        max-width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
-      }
-    `;
+  function clearMainWidthStyle() {
+    document.getElementById(IDS.widthStyle)?.remove();
   }
 
   function applySnippet(text) {
@@ -477,7 +456,7 @@
     const anchor = findAnchor();
     if (!anchor) return;
     const rail = ensureRail(anchor);
-    applyMainWidthStyle();
+    clearMainWidthStyle();
 
     ensureSettingsButton(rail);
     ensureRandomButton(rail);
@@ -664,6 +643,62 @@
     moveToConversation(link);
   }
 
+
+
+  function findMainScrollable() {
+    const candidates = [
+      document.querySelector("main"),
+      document.querySelector('[data-testid="conversation-turns"]')?.closest("div"),
+      document.querySelector('[role="main"]'),
+      document.scrollingElement,
+      document.documentElement,
+      document.body,
+    ].filter(Boolean);
+
+    for (const node of candidates) {
+      if (!node) continue;
+      try {
+        const style = getComputedStyle(node);
+        const canScroll = /(auto|scroll)/.test(style.overflowY) || /(auto|scroll)/.test(style.overflow);
+        if (canScroll && node.scrollHeight > node.clientHeight + 20) return node;
+      } catch {}
+    }
+
+    return document.scrollingElement || document.documentElement || document.body;
+  }
+
+  function scrollElementToTop(target) {
+    if (!target) return;
+    if (target === document.body || target === document.documentElement || target === document.scrollingElement) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+    try {
+      target.scrollTo({ top: 0, behavior: "auto" });
+    } catch {
+      target.scrollTop = 0;
+    }
+  }
+
+  function shouldScrollToTopOnMove() {
+    return true;
+  }
+
+  function scrollMainToTopIfNeeded() {
+    const attempts = [250, 700, 1400];
+    for (const delay of attempts) {
+      setTimeout(() => {
+        if (!isConversation()) return;
+        const target = findMainScrollable();
+        if (!shouldScrollToTopOnMove(target)) return;
+        requestAnimationFrame(() => {
+          scrollElementToTop(target);
+          window.scrollTo({ top: 0, behavior: "auto" });
+        });
+      }, delay);
+    }
+  }
+
   function startHealingLoop() {
     if (healTimer) clearTimeout(healTimer);
     const tick = () => {
@@ -729,6 +764,7 @@
       setTimeout(rerender, 250);
       setTimeout(rerender, 900);
       setTimeout(rerender, 1600);
+      scrollMainToTopIfNeeded();
     }
   }
 
