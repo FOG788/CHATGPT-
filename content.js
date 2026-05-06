@@ -378,30 +378,8 @@
     return rail;
   }
 
-  function applyMainWidthStyle() {
-    let style = document.getElementById(IDS.widthStyle);
-    if (!style) {
-      style = document.createElement("style");
-      style.id = IDS.widthStyle;
-      document.documentElement.appendChild(style);
-    }
-    style.textContent = `
-      main article,
-      main [class*="prose"],
-      main .markdown,
-      main .whitespace-pre-wrap,
-      main [class*="max-w-"] {
-        max-width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
-      }
-      main [class*="mx-auto"] {
-        width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
-      }
-      main form,
-      main form > div,
-      main form [class*="max-w-"] {
-        max-width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
-      }
-    `;
+  function clearMainWidthStyle() {
+    document.getElementById(IDS.widthStyle)?.remove();
   }
 
   function applySnippet(text) {
@@ -481,7 +459,7 @@
     const anchor = findAnchor();
     if (!anchor) return;
     const rail = ensureRail(anchor);
-    applyMainWidthStyle();
+    clearMainWidthStyle();
 
     ensureSettingsButton(rail);
     ensureRandomButton(rail);
@@ -705,13 +683,8 @@
     }
   }
 
-  function shouldScrollToTopOnMove(target) {
-    const height = Math.max(
-      target?.scrollHeight || 0,
-      document.documentElement?.scrollHeight || 0,
-      document.body?.scrollHeight || 0,
-    );
-    return height >= settings.moveScrollTopThresholdPx;
+  function shouldScrollToTopOnMove() {
+    return true;
   }
 
   function scrollMainToTopIfNeeded() {
