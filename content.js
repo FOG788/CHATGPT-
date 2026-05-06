@@ -678,9 +678,6 @@
   }
 
   function scrollMainToTopIfNeeded() {
-    if (!pendingScrollTopAfterMove) return;
-    pendingScrollTopAfterMove = false;
-
     const attempts = [250, 700, 1400];
     for (const delay of attempts) {
       setTimeout(() => {
