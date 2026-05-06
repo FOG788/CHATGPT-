@@ -8,6 +8,7 @@
     del: "cgpt-delete",
     settings: "cgpt-open-settings",
     random: "cgpt-random-thread",
+    top: "cgpt-scroll-top",
     navPrev: "cgpt-nav-prev",
     navNext: "cgpt-nav-next",
     snippets: "cgpt-snippets",
@@ -143,8 +144,9 @@
       #${IDS.count}{padding:0 10px;height:36px;display:flex;align-items:center;background:#111827;color:#fff;border-radius:8px;font-size:12px;font-weight:700}
       #${IDS.del}{height:36px;padding:0 12px;background:#e11d48;color:#fff;border:none;border-radius:8px;cursor:pointer}
       #${IDS.del}:disabled{opacity:.72;cursor:wait}
-      #${IDS.settings},#${IDS.random},#${IDS.navPrev},#${IDS.navNext}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
+      #${IDS.settings},#${IDS.random},#${IDS.top},#${IDS.navPrev},#${IDS.navNext}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
       #${IDS.random}{background:#0f766e}
+      #${IDS.top}{background:#1d4ed8}
       #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
       #${IDS.navPrev},#${IDS.navNext}{display:block;margin:0}
       #${IDS.snippets}{display:flex;flex-direction:column;gap:6px;align-items:stretch;margin-right:8px;flex:0 0 auto}
@@ -360,6 +362,34 @@
     })).filter((item) => item.text);
   }
 
+
+  function scrollAllToTopNow() {
+    const nodes = document.querySelectorAll("*");
+    for (const el of nodes) {
+      try {
+        if (el.scrollTop > 0) el.scrollTop = 0;
+      } catch {}
+    }
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  function ensureTopButton(anchor) {
+    let btn = document.getElementById(IDS.top);
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = IDS.top;
+      btn.type = "button";
+      btn.textContent = "トップへ";
+      btn.title = "トップへ移動";
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        scrollAllToTopNow();
+      });
+    }
+    if (btn.parentElement !== anchor) anchor.appendChild(btn);
+  }
+
   function ensureRail(anchor) {
     let rail = document.getElementById(IDS.rail);
     if (!rail) {
@@ -374,30 +404,8 @@
     return rail;
   }
 
-  function applyMainWidthStyle() {
-    let style = document.getElementById(IDS.widthStyle);
-    if (!style) {
-      style = document.createElement("style");
-      style.id = IDS.widthStyle;
-      document.documentElement.appendChild(style);
-    }
-    style.textContent = `
-      main article,
-      main [class*="prose"],
-      main .markdown,
-      main .whitespace-pre-wrap,
-      main [class*="max-w-"] {
-        max-width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
-      }
-      main [class*="mx-auto"] {
-        width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
-      }
-      main form,
-      main form > div,
-      main form [class*="max-w-"] {
-        max-width: min(100%, ${settings.mainTextMaxWidthPx}px) !important;
-      }
-    `;
+  function clearMainWidthStyle() {
+    document.getElementById(IDS.widthStyle)?.remove();
   }
 
   function applySnippet(text) {
@@ -477,10 +485,11 @@
     const anchor = findAnchor();
     if (!anchor) return;
     const rail = ensureRail(anchor);
-    applyMainWidthStyle();
+    clearMainWidthStyle();
 
     ensureSettingsButton(rail);
     ensureRandomButton(rail);
+    ensureTopButton(rail);
     ensureNavButtons(rail);
     ensureSnippetButtons(rail);
 
@@ -664,6 +673,8 @@
     moveToConversation(link);
   }
 
+
+
   function startHealingLoop() {
     if (healTimer) clearTimeout(healTimer);
     const tick = () => {
@@ -677,6 +688,7 @@
         (settingsBtn && settingsBtn.parentElement !== rail) ||
         (!settingsBtn) ||
         (settings.enableRandomThreadButton && (!randomBtn || randomBtn.parentElement !== rail)) ||
+        (!document.getElementById(IDS.top) || document.getElementById(IDS.top).parentElement !== rail) ||
         (inlineNeeded && (!slot || slot.parentElement !== rail));
       if (needsRepair) rerender();
       if (settings.enableAutoScrollRecent) autoScrollRecentIfNeeded();
