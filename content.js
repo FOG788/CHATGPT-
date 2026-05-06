@@ -32,7 +32,7 @@
   let recentRefreshTimer = null;
   let recentCountDeferredTimer = null;
   let lastFocusedComposer = null;
-  let pendingScrollTopAfterMove = false;
+  let navigationScrollToken = 0;
 
   function clamp(n, min, max, fallback) {
     n = Number(n);
@@ -698,14 +698,18 @@
     return true;
   }
 
-  function scrollMainToTopIfNeeded() {
+  function scrollMainToTopIfNeeded(expectedPath, token) {
     const attempts = [250, 700, 1400];
     for (const delay of attempts) {
       setTimeout(() => {
+        if (token !== navigationScrollToken) return;
+        if (location.pathname !== expectedPath) return;
         if (!isConversation()) return;
         const target = findMainScrollable();
         if (!shouldScrollToTopOnMove(target)) return;
         requestAnimationFrame(() => {
+          if (token !== navigationScrollToken) return;
+          if (location.pathname !== expectedPath) return;
           scrollElementToTop(target);
           bruteForceScrollAllToTop();
         });
@@ -778,7 +782,8 @@
       setTimeout(rerender, 250);
       setTimeout(rerender, 900);
       setTimeout(rerender, 1600);
-      scrollMainToTopIfNeeded();
+      navigationScrollToken += 1;
+      scrollMainToTopIfNeeded(lastPath, navigationScrollToken);
     }
   }
 
