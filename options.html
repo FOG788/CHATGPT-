@@ -19,6 +19,7 @@
     #status{margin-top:16px;font-weight:700}
     input[type="number"]{width:90px;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px}
     input[type="text"]{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;min-width:180px}
+    textarea{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;min-width:280px;min-height:64px;resize:vertical;font-family:inherit}
     .subrow{margin-left:28px;padding-top:4px;color:#6b7280;font-size:13px}
   </style>
 </head>
@@ -45,11 +46,11 @@
     <div class="subrow">上へ移動ショートカット: <input type="text" id="shortcutNavUp" value="Alt+K"></div>
     <div class="subrow">ランダム移動ショートカット: <input type="text" id="shortcutRandom" value="Alt+R"></div>
     <div class="row"><div><label>定型文（5個）</label><div class="desc">入力欄の左にボタン表示。クリックまたはショートカットで入力欄に挿入</div></div></div>
-    <div class="subrow">① ボタン名 <input type="text" id="snippet1Label" value="定型1"> 文面 <input type="text" id="snippet1Text" value="お疲れさまです。要点だけ3つでお願いします。"> ショートカット <input type="text" id="snippet1Shortcut" value="Alt+1"></div>
-    <div class="subrow">② ボタン名 <input type="text" id="snippet2Label" value="定型2"> 文面 <input type="text" id="snippet2Text" value="結論→理由→次アクションの順で整理してください。"> ショートカット <input type="text" id="snippet2Shortcut" value="Alt+2"></div>
-    <div class="subrow">③ ボタン名 <input type="text" id="snippet3Label" value="定型3"> 文面 <input type="text" id="snippet3Text" value="小学生にもわかる言葉で説明してください。"> ショートカット <input type="text" id="snippet3Shortcut" value="Alt+3"></div>
-    <div class="subrow">④ ボタン名 <input type="text" id="snippet4Label" value="定型4"> 文面 <input type="text" id="snippet4Text" value="この内容を箇条書きで5行以内に要約してください。"> ショートカット <input type="text" id="snippet4Shortcut" value="Alt+4"></div>
-    <div class="subrow">⑤ ボタン名 <input type="text" id="snippet5Label" value="定型5"> 文面 <input type="text" id="snippet5Text" value="この文章を丁寧語に書き換えてください。"> ショートカット <input type="text" id="snippet5Shortcut" value="Alt+5"></div>
+    <div class="subrow">① ボタン名 <input type="text" id="snippet1Label" value="定型1"> 文面 <textarea id="snippet1Text">お疲れさまです。要点だけ3つでお願いします。</textarea> ショートカット <input type="text" id="snippet1Shortcut" value="Alt+1"></div>
+    <div class="subrow">② ボタン名 <input type="text" id="snippet2Label" value="定型2"> 文面 <textarea id="snippet2Text">結論→理由→次アクションの順で整理してください。</textarea> ショートカット <input type="text" id="snippet2Shortcut" value="Alt+2"></div>
+    <div class="subrow">③ ボタン名 <input type="text" id="snippet3Label" value="定型3"> 文面 <textarea id="snippet3Text">小学生にもわかる言葉で説明してください。</textarea> ショートカット <input type="text" id="snippet3Shortcut" value="Alt+3"></div>
+    <div class="subrow">④ ボタン名 <input type="text" id="snippet4Label" value="定型4"> 文面 <textarea id="snippet4Text">この内容を箇条書きで5行以内に要約してください。</textarea> ショートカット <input type="text" id="snippet4Shortcut" value="Alt+4"></div>
+    <div class="subrow">⑤ ボタン名 <input type="text" id="snippet5Label" value="定型5"> 文面 <textarea id="snippet5Text">この文章を丁寧語に書き換えてください。</textarea> ショートカット <input type="text" id="snippet5Shortcut" value="Alt+5"></div>
     <div class="subrow">定型文ボタン横幅: <input type="number" id="snippetButtonWidthPx" min="56" max="320" step="1" value="88"> px</div>
 
     <div class="row"><div><label>表示位置・幅</label><div class="desc">左下ボタン群の位置と、メイン文章の最大幅を調整</div></div></div>
