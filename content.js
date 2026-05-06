@@ -33,6 +33,7 @@
   let recentRefreshTimer = null;
   let recentCountDeferredTimer = null;
   let lastFocusedComposer = null;
+  let navigationScrollToken = 0;
 
   function clamp(n, min, max, fallback) {
     n = Number(n);
@@ -50,6 +51,8 @@
     s.railBottomPx = clamp(s.railBottomPx, 0, 1200, 150);
     s.mainTextMaxWidthPx = clamp(s.mainTextMaxWidthPx, 480, 2000, 760);
     s.snippetButtonWidthPx = clamp(s.snippetButtonWidthPx, 56, 320, 88);
+    s.moveScrollTopThresholdPx = clamp(s.moveScrollTopThresholdPx, 800, 40000, 3000);
+    s.moveScrollTopDelayMs = clamp(s.moveScrollTopDelayMs, 0, 10000, 1200);
     return s;
   }
 
@@ -233,11 +236,13 @@
     if (!nextPath || nextPath === currentPath) return false;
     try {
       target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+      pendingScrollTopAfterMove = true;
       setTimeout(() => {
         if (location.pathname === currentPath) location.href = href;
       }, 220);
       return true;
     } catch {
+      pendingScrollTopAfterMove = true;
       location.href = href;
       return true;
     }
@@ -741,6 +746,8 @@
       setTimeout(rerender, 250);
       setTimeout(rerender, 900);
       setTimeout(rerender, 1600);
+      navigationScrollToken += 1;
+      scrollMainToTopIfNeeded(lastPath, navigationScrollToken);
     }
   }
 
