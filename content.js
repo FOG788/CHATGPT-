@@ -8,6 +8,7 @@
     del: "cgpt-delete",
     settings: "cgpt-open-settings",
     random: "cgpt-random-thread",
+    top: "cgpt-scroll-top",
     navPrev: "cgpt-nav-prev",
     navNext: "cgpt-nav-next",
     snippets: "cgpt-snippets",
@@ -146,8 +147,9 @@
       #${IDS.count}{padding:0 10px;height:36px;display:flex;align-items:center;background:#111827;color:#fff;border-radius:8px;font-size:12px;font-weight:700}
       #${IDS.del}{height:36px;padding:0 12px;background:#e11d48;color:#fff;border:none;border-radius:8px;cursor:pointer}
       #${IDS.del}:disabled{opacity:.72;cursor:wait}
-      #${IDS.settings},#${IDS.random},#${IDS.navPrev},#${IDS.navNext}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
+      #${IDS.settings},#${IDS.random},#${IDS.top},#${IDS.navPrev},#${IDS.navNext}{height:36px;padding:0 12px;background:#374151;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;flex:0 0 auto}
       #${IDS.random}{background:#0f766e}
+      #${IDS.top}{background:#1d4ed8}
       #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
       #${IDS.navPrev},#${IDS.navNext}{display:block;margin:0}
       #${IDS.snippets}{display:flex;flex-direction:column;gap:6px;align-items:stretch;margin-right:8px;flex:0 0 auto}
@@ -365,6 +367,34 @@
     })).filter((item) => item.text);
   }
 
+
+  function scrollAllToTopNow() {
+    const nodes = document.querySelectorAll("*");
+    for (const el of nodes) {
+      try {
+        if (el.scrollTop > 0) el.scrollTop = 0;
+      } catch {}
+    }
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  function ensureTopButton(anchor) {
+    let btn = document.getElementById(IDS.top);
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = IDS.top;
+      btn.type = "button";
+      btn.textContent = "トップへ";
+      btn.title = "トップへ移動";
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        scrollAllToTopNow();
+      });
+    }
+    if (btn.parentElement !== anchor) anchor.appendChild(btn);
+  }
+
   function ensureRail(anchor) {
     let rail = document.getElementById(IDS.rail);
     if (!rail) {
@@ -464,6 +494,7 @@
 
     ensureSettingsButton(rail);
     ensureRandomButton(rail);
+    ensureTopButton(rail);
     ensureNavButtons(rail);
     ensureSnippetButtons(rail);
 
@@ -649,54 +680,6 @@
 
 
 
-  function findMainScrollable() {
-    const candidates = [
-      document.querySelector("main"),
-      document.querySelector('[data-testid="conversation-turns"]')?.closest("div"),
-      document.querySelector('[role="main"]'),
-      document.scrollingElement,
-      document.documentElement,
-      document.body,
-    ].filter(Boolean);
-
-    for (const node of candidates) {
-      if (!node) continue;
-      try {
-        const style = getComputedStyle(node);
-        const canScroll = /(auto|scroll)/.test(style.overflowY) || /(auto|scroll)/.test(style.overflow);
-        if (canScroll && node.scrollHeight > node.clientHeight + 20) return node;
-      } catch {}
-    }
-
-    return document.scrollingElement || document.documentElement || document.body;
-  }
-
-  function scrollElementToTop(target) {
-    if (!target) return;
-    if (target === document.body || target === document.documentElement || target === document.scrollingElement) {
-      window.scrollTo({ top: 0, behavior: "auto" });
-      return;
-    }
-    try {
-      target.scrollTo({ top: 0, behavior: "auto" });
-    } catch {
-      target.scrollTop = 0;
-    }
-  }
-
-
-  function scrollMainToTopIfNeeded(expectedPath, token) {
-    const delay = settings.moveScrollTopDelayMs;
-    setTimeout(() => {
-      if (token !== navigationScrollToken) return;
-      if (location.pathname !== expectedPath) return;
-      if (!isConversation()) return;
-      const target = findMainScrollable();
-      scrollElementToTop(target);
-      window.scrollTo({ top: 0, behavior: "auto" });
-    }, delay);
-  }
-
   function startHealingLoop() {
     if (healTimer) clearTimeout(healTimer);
     const tick = () => {
@@ -710,6 +693,7 @@
         (settingsBtn && settingsBtn.parentElement !== rail) ||
         (!settingsBtn) ||
         (settings.enableRandomThreadButton && (!randomBtn || randomBtn.parentElement !== rail)) ||
+        (!document.getElementById(IDS.top) || document.getElementById(IDS.top).parentElement !== rail) ||
         (inlineNeeded && (!slot || slot.parentElement !== rail));
       if (needsRepair) rerender();
       if (settings.enableAutoScrollRecent) autoScrollRecentIfNeeded();
