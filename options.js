@@ -57,23 +57,6 @@ const NUMERIC_INPUT_DEFS = [
     fallback: 88,
     read: (data) => data.snippetButtonWidthPx || 88,
   },
-  {
-    id: "moveScrollTopThresholdPx",
-    payloadKey: "moveScrollTopThresholdPx",
-    min: 800,
-    max: 40000,
-    fallback: 3000,
-    read: (data) => data.moveScrollTopThresholdPx || 3000,
-  },
-  {
-    id: "moveScrollTopDelaySec",
-    payloadKey: "moveScrollTopDelayMs",
-    min: 0,
-    max: 10,
-    fallback: 1.2,
-    read: (data) => (data.moveScrollTopDelayMs || 1200) / 1000,
-    write: (value) => value * 1000,
-  },
 ];
 
 function clamp(value, min, max, fallback) {
