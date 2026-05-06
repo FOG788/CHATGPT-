@@ -152,9 +152,10 @@
       #${IDS.top}{background:#1d4ed8}
       #${IDS.navPrev},#${IDS.navNext}{background:#1f2937}
       #${IDS.navPrev},#${IDS.navNext}{display:block;margin:0}
-      #${IDS.snippets}{display:flex;flex-direction:column;gap:6px;align-items:stretch;margin-right:8px;flex:0 0 auto}
+      #${IDS.snippets}{display:flex;flex-direction:column;gap:6px;align-items:stretch;flex:0 0 auto}
       #${IDS.snippets} button{height:30px;padding:0 10px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px;text-align:left}
-      #${IDS.rail}{position:fixed;left:340px;bottom:150px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;max-width:360px;z-index:2147483640}
+      #${IDS.rail}{position:fixed;left:340px;bottom:150px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;max-width:360px;z-index:2147483640}
+      .cgpt-row{display:flex;align-items:center;gap:8px}
     `;
     document.documentElement.appendChild(style);
   }
@@ -331,7 +332,7 @@
       prev = document.createElement("button");
       prev.id = prevId;
       prev.type = "button";
-      prev.textContent = "↑";
+      prev.textContent = "上ボタン";
       prev.title = "上のスレッドへ";
       prev.addEventListener("click", (e) => {
         e.preventDefault();
@@ -345,7 +346,7 @@
       next = document.createElement("button");
       next.id = nextId;
       next.type = "button";
-      next.textContent = "↓";
+      next.textContent = "下ボタン";
       next.title = "下のスレッドへ";
       next.addEventListener("click", (e) => {
         e.preventDefault();
@@ -540,6 +541,27 @@
     }
 
     if (slot.parentElement !== rail) rail.appendChild(slot);
+
+    const snippetButtons = [...document.querySelectorAll(`#${IDS.snippets} button`)];
+    const settingsBtn = document.getElementById(IDS.settings);
+    const navPrevBtn = document.getElementById(IDS.navPrev);
+    const navNextBtn = document.getElementById(IDS.navNext);
+    const topBtn = document.getElementById(IDS.top);
+    const randomBtn = document.getElementById(IDS.random);
+    const countBtn = document.getElementById(IDS.count);
+    const deleteBtn = document.getElementById(IDS.del);
+
+    rail.innerHTML = "";
+    const rightButtons = [settingsBtn, navPrevBtn, navNextBtn, topBtn, randomBtn];
+    for (let i = 0; i < 5; i++) {
+      const row = document.createElement("div");
+      row.className = "cgpt-row";
+      if (snippetButtons[i]) row.appendChild(snippetButtons[i]);
+      if (rightButtons[i]) row.appendChild(rightButtons[i]);
+      if (row.childElementCount) rail.appendChild(row);
+    }
+    if (countBtn) rail.appendChild(countBtn);
+    if (deleteBtn) rail.appendChild(deleteBtn);
   }
 
   function startRecentCountAutoRefresh() {
