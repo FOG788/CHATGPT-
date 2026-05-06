@@ -4,6 +4,78 @@ const NUMERIC_SETTING_KEYS = SHARED.NUMERIC_SETTING_KEYS || [];
 const TEXT_SETTING_KEYS = SHARED.TEXT_SETTING_KEYS || [];
 const STATUS_CLEAR_DELAY_MS = 1200;
 
+const NUMERIC_INPUT_DEFS = [
+  {
+    id: "autoScrollIntervalMin",
+    payloadKey: "autoScrollIntervalMs",
+    min: 1,
+    max: 30,
+    fallback: 1,
+    read: (data) => Math.round((data.autoScrollIntervalMs || 60000) / 60000),
+    write: (value) => value * 60000,
+  },
+  {
+    id: "autoScrollMaxRuns",
+    payloadKey: "autoScrollMaxRuns",
+    min: 1,
+    max: 200,
+    fallback: 20,
+    read: (data) => data.autoScrollMaxRuns || 20,
+  },
+  {
+    id: "autoScrollStepWaitSec",
+    payloadKey: "autoScrollStepWaitMs",
+    min: 1,
+    max: 300,
+    fallback: 2,
+    read: (data) => Math.round((data.autoScrollStepWaitMs || 2000) / 1000),
+    write: (value) => value * 1000,
+  },
+  {
+    id: "autoScrollRecentThreshold",
+    payloadKey: "autoScrollRecentThreshold",
+    min: 1,
+    max: 1000,
+    fallback: 100,
+    read: (data) => data.autoScrollRecentThreshold || 100,
+  },
+  { id: "railLeftPx", payloadKey: "railLeftPx", min: 0, max: 1600, fallback: 340, read: (data) => data.railLeftPx || 340 },
+  { id: "railBottomPx", payloadKey: "railBottomPx", min: 0, max: 1200, fallback: 150, read: (data) => data.railBottomPx || 150 },
+  {
+    id: "mainTextMaxWidthPx",
+    payloadKey: "mainTextMaxWidthPx",
+    min: 480,
+    max: 2000,
+    fallback: 760,
+    read: (data) => data.mainTextMaxWidthPx || 760,
+  },
+  {
+    id: "snippetButtonWidthPx",
+    payloadKey: "snippetButtonWidthPx",
+    min: 56,
+    max: 320,
+    fallback: 88,
+    read: (data) => data.snippetButtonWidthPx || 88,
+  },
+  {
+    id: "moveScrollTopThresholdPx",
+    payloadKey: "moveScrollTopThresholdPx",
+    min: 800,
+    max: 40000,
+    fallback: 3000,
+    read: (data) => data.moveScrollTopThresholdPx || 3000,
+  },
+  {
+    id: "moveScrollTopDelaySec",
+    payloadKey: "moveScrollTopDelayMs",
+    min: 0,
+    max: 10,
+    fallback: 1.2,
+    read: (data) => (data.moveScrollTopDelayMs || 1200) / 1000,
+    write: (value) => value * 1000,
+  },
+];
+
 function clamp(value, min, max, fallback) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -31,22 +103,9 @@ function loadCheckboxes(data) {
 }
 
 function loadNumericInputs(data) {
-  document.getElementById("autoScrollIntervalMin").value = String(
-    Math.round((data.autoScrollIntervalMs || 60000) / 60000),
-  );
-  document.getElementById("autoScrollMaxRuns").value = String(data.autoScrollMaxRuns || 20);
-  document.getElementById("autoScrollStepWaitSec").value = String(
-    Math.round((data.autoScrollStepWaitMs || 2000) / 1000),
-  );
-  document.getElementById("autoScrollRecentThreshold").value = String(
-    data.autoScrollRecentThreshold || 100,
-  );
-  document.getElementById("railLeftPx").value = String(data.railLeftPx || 340);
-  document.getElementById("railBottomPx").value = String(data.railBottomPx || 150);
-  document.getElementById("mainTextMaxWidthPx").value = String(data.mainTextMaxWidthPx || 760);
-  document.getElementById("snippetButtonWidthPx").value = String(data.snippetButtonWidthPx || 88);
-  document.getElementById("moveScrollTopThresholdPx").value = String(data.moveScrollTopThresholdPx || 3000);
-  document.getElementById("moveScrollTopDelaySec").value = String((data.moveScrollTopDelayMs || 1200) / 1000);
+  for (const def of NUMERIC_INPUT_DEFS) {
+    document.getElementById(def.id).value = String(def.read(data));
+  }
 }
 
 function loadTextInputs(data) {
@@ -70,43 +129,12 @@ function buildPayload() {
     payload[key] = document.getElementById(key).checked;
   }
 
-  payload.autoScrollIntervalMs =
-    clamp(document.getElementById("autoScrollIntervalMin").value, 1, 30, 1) * 60000;
-  payload.autoScrollMaxRuns = clamp(document.getElementById("autoScrollMaxRuns").value, 1, 200, 20);
-  payload.autoScrollStepWaitMs =
-    clamp(document.getElementById("autoScrollStepWaitSec").value, 1, 300, 2) * 1000;
-  payload.autoScrollRecentThreshold = clamp(
-    document.getElementById("autoScrollRecentThreshold").value,
-    1,
-    1000,
-    100,
-  );
-  payload.railLeftPx = clamp(document.getElementById("railLeftPx").value, 0, 1600, 340);
-  payload.railBottomPx = clamp(document.getElementById("railBottomPx").value, 0, 1200, 150);
-  payload.mainTextMaxWidthPx = clamp(
-    document.getElementById("mainTextMaxWidthPx").value,
-    480,
-    2000,
-    760,
-  );
-  payload.snippetButtonWidthPx = clamp(
-    document.getElementById("snippetButtonWidthPx").value,
-    56,
-    320,
-    88,
-  );
-  payload.moveScrollTopThresholdPx = clamp(
-    document.getElementById("moveScrollTopThresholdPx").value,
-    800,
-    40000,
-    3000,
-  );
-  payload.moveScrollTopDelayMs = clamp(
-    Number(document.getElementById("moveScrollTopDelaySec").value) * 1000,
-    0,
-    10000,
-    1200,
-  );
+  for (const def of NUMERIC_INPUT_DEFS) {
+    const rawValue = document.getElementById(def.id).value;
+    const clamped = clamp(rawValue, def.min, def.max, def.fallback);
+    payload[def.payloadKey] = def.write ? def.write(clamped) : clamped;
+  }
+
   for (const key of TEXT_SETTING_KEYS) {
     const el = document.getElementById(key);
     payload[key] = (el?.value || "").trim() || DEFAULTS[key];
