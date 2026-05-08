@@ -34,6 +34,7 @@
   let recentCountDeferredTimer = null;
   let lastFocusedComposer = null;
   let navigationScrollToken = 0;
+  let pendingScrollTopAfterMove = false;
 
   function clamp(n, min, max, fallback) {
     n = Number(n);
@@ -394,6 +395,24 @@
       }
     }
     window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+
+  function scrollMainToTopIfNeeded(pathname, token) {
+    if (!pendingScrollTopAfterMove) return;
+    if (!isConversation(pathname)) {
+      pendingScrollTopAfterMove = false;
+      return;
+    }
+    const run = () => {
+      if (token !== navigationScrollToken) return;
+      scrollMainToTopNow();
+      pendingScrollTopAfterMove = false;
+    };
+    requestAnimationFrame(run);
+    setTimeout(run, 250);
+    setTimeout(run, 900);
+    setTimeout(run, 1600);
   }
 
   function ensureTopButton(anchor) {
